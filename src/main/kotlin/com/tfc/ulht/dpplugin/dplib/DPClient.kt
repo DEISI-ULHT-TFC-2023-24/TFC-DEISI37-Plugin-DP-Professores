@@ -7,7 +7,7 @@ import okhttp3.*
 import java.io.IOException
 import kotlinx.serialization.decodeFromString
 
-object DPClient {
+class DPClient {
     /* private val authenticator = object : Authenticator {
         var username: String? = null
         var token: String? = null
@@ -23,12 +23,15 @@ object DPClient {
         }
     }*/
 
-    private val client = OkHttpClient()
+    companion object {
+        private val client = OkHttpClient()
+    }
+
     private val json = Json { ignoreUnknownKeys = true }
 
     private var authString: String? = null
 
-    val loggedIn: Boolean
+    private val loggedIn: Boolean
         get() = authString != null
 
     fun login(token: String, callback: ((Boolean) -> Unit)?) {
@@ -50,6 +53,8 @@ object DPClient {
                         CredentialAttributes("DP", "dp"),
                         com.intellij.credentialStore.Credentials(token))
 
+                    authString = token
+
                     token
                 } else {
                     if (callback != null) callback(false)
@@ -57,6 +62,8 @@ object DPClient {
                     PasswordSafe.instance.set(
                         CredentialAttributes("DP", "dp"),
                         null)
+
+                    authString = null
 
                     null
                 }

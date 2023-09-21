@@ -19,7 +19,7 @@ class LoginDialog(project: Project?) : DialogWrapper(project) {
         title = "DP - Login"
 
         loginButton.addActionListener {
-            DPClient.login(userField.text, tokenField.text) { res ->
+            State.client.login(userField.text, tokenField.text) { res ->
                 resultLabel.text = "Login " + if (res) "successful" else "unsuccessful"
             }
         }

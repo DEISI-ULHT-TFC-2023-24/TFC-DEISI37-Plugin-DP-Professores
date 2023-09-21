@@ -11,7 +11,7 @@ class ProjectListener : ProjectManagerListener {
         val credentials = PasswordSafe.instance.get(CredentialAttributes("DP", "dp"))
 
         credentials?.userName?.let {
-            DPClient.login(it, null)
+            State.client.login(it, null)
         }
     }
 }

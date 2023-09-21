@@ -15,7 +15,7 @@ import javax.swing.SwingUtilities
 
 class AssignmentsAction : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
-        DPClient.getAssignments {
+        State.client.getAssignments {
             it?.let { assignment ->
                 val file = VirtualFile(assignment)
 
