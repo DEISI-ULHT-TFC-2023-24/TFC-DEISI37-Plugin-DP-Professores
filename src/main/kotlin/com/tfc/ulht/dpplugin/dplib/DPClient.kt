@@ -1,7 +1,5 @@
 package com.tfc.ulht.dpplugin.dplib
 
-import com.intellij.credentialStore.CredentialAttributes
-import com.intellij.ide.passwordSafe.PasswordSafe
 import kotlinx.serialization.json.Json
 import okhttp3.*
 import java.io.IOException
@@ -34,6 +32,19 @@ class DPClient {
     private val loggedIn: Boolean
         get() = authString != null
 
+    fun loginBlocking(token: String): Boolean {
+        val request = Request.Builder()
+            .url(BASE_URL + "api/teacher/assignments/current")
+            .header("Authorization", token)
+            .build()
+
+        return client.newCall(request).execute().let {
+            authString = if (it.isSuccessful) token else null
+
+            it.isSuccessful
+        }
+    }
+
     fun login(token: String, callback: ((Boolean) -> Unit)?) {
         val request = Request.Builder()
             .url(BASE_URL + "api/teacher/assignments/current")
@@ -46,27 +57,9 @@ class DPClient {
             }
 
             override fun onResponse(call: Call, response: Response) {
-                authString = if (response.isSuccessful) {
-                    if (callback != null) callback(true)
+                authString = if (response.isSuccessful) token else null
 
-                    PasswordSafe.instance.set(
-                        CredentialAttributes("DP", "dp"),
-                        com.intellij.credentialStore.Credentials(token))
-
-                    authString = token
-
-                    token
-                } else {
-                    if (callback != null) callback(false)
-
-                    PasswordSafe.instance.set(
-                        CredentialAttributes("DP", "dp"),
-                        null)
-
-                    authString = null
-
-                    null
-                }
+                if (callback != null) callback(response.isSuccessful)
             }
         })
     }
@@ -74,6 +67,24 @@ class DPClient {
     fun login(username: String, token: String, callback: ((Boolean) -> Unit)?) {
         val credentials = Credentials.basic(username, token)
         login(credentials, callback)
+    }
+
+    fun getAssigmentsBlocking(): List<Assignment>? {
+        if (!loggedIn) return null
+
+        val request = Request.Builder()
+            .url(BASE_URL + "api/teacher/assignments/current")
+            .header("Authorization", authString!!)
+            .build()
+
+        return client.newCall(request).execute().let { response ->
+            try {
+                val assignment = json.decodeFromString<List<Assignment>>(response.body!!.string())
+                assignment
+            } catch (_: Exception) {
+                null
+            }
+        }
     }
 
     fun getAssignments(callback: (List<Assignment>?) -> Unit) {
@@ -106,6 +117,24 @@ class DPClient {
                 }
             }
         })
+    }
+
+    fun getSubmissionsBlocking(assignmentId: String): List<SubmissionsResponse>? {
+        if (!loggedIn) return null
+
+        val request = Request.Builder()
+            .url(BASE_URL + "api/teacher/assignments/$assignmentId/submissions")
+            .header("Authorization", authString!!)
+            .build()
+
+        return client.newCall(request).execute().let { response ->
+            try {
+                val submissions = json.decodeFromString<List<SubmissionsResponse>>(response.body!!.string())
+                submissions
+            } catch (_: Exception) {
+                null
+            }
+        }
     }
 
     fun getSubmissions(assignmentId: String, callback: ((List<SubmissionsResponse>?) -> Unit)) {

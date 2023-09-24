@@ -1,8 +1,10 @@
 package com.tfc.ulht.dpplugin
 
+import com.intellij.credentialStore.CredentialAttributes
+import com.intellij.ide.passwordSafe.PasswordSafe
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
-import com.tfc.ulht.dpplugin.dplib.DPClient
+import okhttp3.Credentials
 import java.awt.Dimension
 import java.awt.event.ComponentEvent
 import java.awt.event.ComponentListener
@@ -19,8 +21,14 @@ class LoginDialog(project: Project?) : DialogWrapper(project) {
         title = "DP - Login"
 
         loginButton.addActionListener {
-            State.client.login(userField.text, tokenField.text) { res ->
-                resultLabel.text = "Login " + if (res) "successful" else "unsuccessful"
+            Credentials.basic(userField.text, tokenField.text).let { token ->
+                State.client.login(token) { res ->
+                    PasswordSafe.instance.set(
+                        CredentialAttributes("DP", "dp"),
+                        com.intellij.credentialStore.Credentials(if (res) token else null))
+
+                    resultLabel.text = "Login " + if (res) "successful" else "unsuccessful"
+                }
             }
         }
     }
