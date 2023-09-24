@@ -1,39 +1,34 @@
 package com.tfc.ulht.dpplugin.dplib
 
+import okhttp3.Credentials
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
-import java.util.ResourceBundle
+import java.util.*
 
 class DPClientTest {
-    private val token = ResourceBundle.getBundle("client").getString("token")
+    private val token = ResourceBundle.getBundle("client").getString("token").split(":").let {
+        Credentials.basic(it[0], it[1])
+    }
 
     @Test
     fun assignmentListTest() {
         val client = DPClient()
 
-        client.login(token) {
-            assertTrue(it)
+        assertTrue(client.loginBlocking(token))
 
-            client.getAssignments { assignments ->
-                assertTrue((assignments?.size ?: 0) > 0)
-            }
-        }
+        assertTrue((client.getAssigmentsBlocking()?.size ?: 0) > 0)
     }
 
     @Test
     fun assignmentSubmissionsTest() {
         val client = DPClient()
 
-        client.login(token) {
-            assertTrue(it)
+        assertTrue(client.loginBlocking(token))
 
-            client.getAssignments { assignments ->
-                assertTrue((assignments?.size ?: 0) > 0)
+        val id = client.getAssigmentsBlocking()?.getOrNull(0)?.id
+        assertNotNull(id)
 
-                client.getSubmissions(assignments!![0].id) { sub ->
-                    assertTrue((sub?.size ?: 0) > 0)
-                }
-            }
-        }
+        assertTrue((client.getSubmissionsBlocking(id!!)?.size ?: 0) > 0)
     }
 }
