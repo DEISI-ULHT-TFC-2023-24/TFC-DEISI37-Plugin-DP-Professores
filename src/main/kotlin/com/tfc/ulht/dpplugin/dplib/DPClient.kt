@@ -4,6 +4,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.*
 import java.io.IOException
 import kotlinx.serialization.decodeFromString
+import java.io.InputStream
 
 class DPClient {
     /* private val authenticator = object : Authenticator {
@@ -165,6 +166,42 @@ class DPClient {
                 } catch (_: Exception) {
                     callback(null)
                 }
+            }
+        })
+    }
+
+    fun downloadSubmissionBlocking(submissionId: String): InputStream? {
+        if (!loggedIn) return null
+
+        val request = Request.Builder()
+            .url(BASE_URL + "api/teacher/download/$submissionId")
+            .header("Authorization", authString!!)
+            .build()
+
+        return client.newCall(request).execute().let { response ->
+            if (!response.isSuccessful) return@let null
+
+            response.body?.byteStream()
+        }
+    }
+
+    fun downloadSubmission(submissionId: String, callback: ((InputStream?) -> Unit)) {
+        if (!loggedIn) return
+
+        val request = Request.Builder()
+            .url(BASE_URL + "download/$submissionId")
+            .header("Authorization", authString!!)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                callback(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (!response.isSuccessful) callback(null)
+
+                callback(response.body?.byteStream())
             }
         })
     }
