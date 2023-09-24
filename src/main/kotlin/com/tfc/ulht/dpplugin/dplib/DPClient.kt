@@ -189,7 +189,7 @@ class DPClient {
         if (!loggedIn) return
 
         val request = Request.Builder()
-            .url(BASE_URL + "download/$submissionId")
+            .url(BASE_URL + "api/teacher/download/$submissionId")
             .header("Authorization", authString!!)
             .build()
 
