@@ -44,7 +44,7 @@ data class Submission(
     val submissionDate: String,
     val status: String,
     val statusDate: String,
-    val testResults: List<TestResult>?
+    val testResults: List<TestResult>? = null
 )
 
 @Serializable
