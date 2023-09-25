@@ -29,7 +29,13 @@ class SubmissionsAction : AnAction() {
         val finalPath = path.removeSuffix(".zip")
 
         try {
+            with (File(finalPath)) {
+                if (this.exists()) this.deleteRecursively()
+            }
+
             ZipFile(path).extractAll(finalPath)
+
+            File(path).delete()
         } catch (e: Exception) {
             Logger.getInstance(SubmissionsAction::class.java).error("Couldn't extract file, ${e.message}")
             return null
