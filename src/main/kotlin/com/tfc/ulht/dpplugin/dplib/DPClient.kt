@@ -39,10 +39,12 @@ class DPClient {
             .header("Authorization", token)
             .build()
 
-        return client.newCall(request).execute().let {
-            authString = if (it.isSuccessful) token else null
+        return client.newCall(request).execute().let { response ->
+            authString = if (response.isSuccessful) token else null
 
-            it.isSuccessful
+            response.isSuccessful.also {
+                response.close()
+            }
         }
     }
 
@@ -61,6 +63,7 @@ class DPClient {
                 authString = if (response.isSuccessful) token else null
 
                 if (callback != null) callback(response.isSuccessful)
+                response.close()
             }
         })
     }
@@ -81,8 +84,10 @@ class DPClient {
         return client.newCall(request).execute().let { response ->
             try {
                 val assignment = json.decodeFromString<List<Assignment>>(response.body!!.string())
+                response.close()
                 assignment
             } catch (_: Exception) {
+                response.close()
                 null
             }
         }
@@ -107,14 +112,17 @@ class DPClient {
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
                     callback(null)
+                    response.close()
                     return
                 }
 
                 try {
                     val assignment = json.decodeFromString<List<Assignment>>(response.body!!.string())
                     callback(assignment)
+                    response.close()
                 } catch (_: Exception) {
                     callback(null)
+                    response.close()
                 }
             }
         })
@@ -131,8 +139,10 @@ class DPClient {
         return client.newCall(request).execute().let { response ->
             try {
                 val submissions = json.decodeFromString<List<SubmissionsResponse>>(response.body!!.string())
+                response.close()
                 submissions
             } catch (_: Exception) {
+                response.close()
                 null
             }
         }
@@ -157,14 +167,17 @@ class DPClient {
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
                     callback(null)
+                    response.close()
                     return
                 }
 
                 try {
                     val submissions = json.decodeFromString<List<SubmissionsResponse>>(response.body!!.string())
                     callback(submissions)
+                    response.close()
                 } catch (_: Exception) {
                     callback(null)
+                    response.close()
                 }
             }
         })
@@ -181,7 +194,9 @@ class DPClient {
         return client.newCall(request).execute().let { response ->
             if (!response.isSuccessful) return@let null
 
-            response.body?.byteStream()
+            response.body?.byteStream().also {
+                response.close()
+            }
         }
     }
 
@@ -202,6 +217,7 @@ class DPClient {
                 if (!response.isSuccessful) callback(null)
 
                 callback(response.body?.byteStream())
+                response.close()
             }
         })
     }
