@@ -10,12 +10,12 @@ import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
+import com.intellij.util.ui.JBUI
 import com.tfc.ulht.dpplugin.dplib.Assignment
+import com.tfc.ulht.dpplugin.ui.AssignmentComponent
+import java.awt.Dimension
 import java.beans.PropertyChangeListener
-import javax.swing.BoxLayout
-import javax.swing.JComponent
-import javax.swing.JLabel
-import javax.swing.JPanel
+import javax.swing.*
 
 class DPTabProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile): Boolean = file is com.tfc.ulht.dpplugin.VirtualFile
@@ -31,14 +31,28 @@ class DPTabProvider : FileEditorProvider, DumbAware {
 class DPTab(private val data: List<Assignment>) : FileEditor {
     private val root: JPanel = JPanel().apply {
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        this.border = JBUI.Borders.empty(0, 20)
     }
 
     private val userData = UserDataHolderBase()
 
     init {
-        data.forEach {
-            root.add(JLabel(it.name))
+        root.add(JLabel("<html><h1>Assignments</h1></html").apply { alignmentX = 0.0f })
+        val assignmentPanel = JPanel().apply {
+            this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            this.border = JBUI.Borders.empty(0, 10)
         }
+        root.add(assignmentPanel)
+
+        data.forEach {
+            assignmentPanel.add(AssignmentComponent(it))
+
+            assignmentPanel.add(JSeparator(SwingConstants.HORIZONTAL).apply {
+                maximumSize = Dimension(maximumSize.width, 2)
+            })
+        }
+
+        if (assignmentPanel.componentCount > 1) assignmentPanel.remove(assignmentPanel.componentCount - 1)
     }
 
     override fun <T : Any?> getUserData(key: Key<T>): T? = userData.getUserData(key)
