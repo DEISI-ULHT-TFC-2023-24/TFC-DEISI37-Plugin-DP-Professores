@@ -1,6 +1,8 @@
 package com.tfc.ulht.dpplugin
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileEditor
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.openapi.fileEditor.FileEditorProvider
 import com.intellij.openapi.fileEditor.FileEditorState
@@ -11,8 +13,9 @@ import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.util.ui.JBUI
-import com.tfc.ulht.dpplugin.dplib.Assignment
+import com.tfc.ulht.dpplugin.dplib.*
 import com.tfc.ulht.dpplugin.ui.AssignmentComponent
+import com.tfc.ulht.dpplugin.ui.GroupSubmissionsComponent
 import java.awt.Dimension
 import java.beans.PropertyChangeListener
 import javax.swing.*
@@ -20,40 +23,96 @@ import javax.swing.*
 class DPTabProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile): Boolean = file is com.tfc.ulht.dpplugin.VirtualFile
 
-    override fun createEditor(project: Project, file: VirtualFile): FileEditor = DPTab((file as com.tfc.ulht.dpplugin.VirtualFile).assignment)
+    override fun createEditor(project: Project, file: VirtualFile): FileEditor = DPTab(project, (file as com.tfc.ulht.dpplugin.VirtualFile).data)
 
     override fun getEditorTypeId(): String = "dp-editor"
 
     override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.HIDE_DEFAULT_EDITOR
-
 }
 
-class DPTab(private val data: List<Assignment>) : FileEditor {
-    private val root: JPanel = JPanel().apply {
+class DPPanel : JPanel() {
+    lateinit var tab: DPTab
+}
+
+@Suppress("UNCHECKED_CAST")
+private fun assignmentTabProvider(data: List<DPData>) : DPPanel {
+    val root = DPPanel().apply {
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
         this.border = JBUI.Borders.empty(0, 20)
     }
 
-    private val userData = UserDataHolderBase()
+    val assignments = data as List<Assignment>
 
-    init {
-        root.add(JLabel("<html><h1>Assignments</h1></html").apply { alignmentX = 0.0f })
-        val assignmentPanel = JPanel().apply {
-            this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            this.border = JBUI.Borders.empty(0, 10)
-        }
-        root.add(assignmentPanel)
-
-        data.forEach {
-            assignmentPanel.add(AssignmentComponent(it))
-
-            assignmentPanel.add(JSeparator(SwingConstants.HORIZONTAL).apply {
-                maximumSize = Dimension(maximumSize.width, 2)
-            })
-        }
-
-        if (assignmentPanel.componentCount > 1) assignmentPanel.remove(assignmentPanel.componentCount - 1)
+    root.add(JLabel("<html><h1>Assignments</h1></html").apply { alignmentX = 0.0f })
+    val assignmentsPanel = JPanel().apply {
+        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        this.border = JBUI.Borders.empty(0, 10)
     }
+    root.add(assignmentsPanel)
+
+    assignments.forEach {
+        assignmentsPanel.add(AssignmentComponent(it).apply { this.addSubmissionClickListener {
+            State.client.getSubmissions(this.assignment.id) { subs ->
+                subs?.let { data ->
+                    ApplicationManager.getApplication().invokeLater {
+                        FileEditorManager.getInstance(root.tab.project).openFile(VirtualFile(data), true)
+                    }
+                }
+            }
+        }})
+
+        assignmentsPanel.add(JSeparator(SwingConstants.HORIZONTAL).apply {
+            maximumSize = Dimension(maximumSize.width, 2)
+        })
+    }
+
+    if (assignmentsPanel.componentCount > 1) assignmentsPanel.remove(assignmentsPanel.componentCount - 1)
+
+    return root
+}
+
+@Suppress("UNCHECKED_CAST")
+fun groupSubmissionsTabProvider(data: List<DPData>) : DPPanel {
+    val root = DPPanel().apply {
+        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        this.border = JBUI.Borders.empty(0, 20)
+    }
+
+    val submissions = data as List<SubmissionsResponse>
+
+    root.add(JLabel("<html><h1>Submissions</h1></html").apply { alignmentX = 0.0f })
+    val submissionsPanel = JPanel().apply {
+        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        this.border = JBUI.Borders.empty(0, 10)
+    }
+    root.add(submissionsPanel)
+
+    submissions.forEach {
+        submissionsPanel.add(GroupSubmissionsComponent(it))
+
+        submissionsPanel.add(JSeparator(SwingConstants.HORIZONTAL).apply {
+            maximumSize = Dimension(maximumSize.width, 2)
+        })
+    }
+
+    if (submissionsPanel.componentCount > 1) submissionsPanel.remove(submissionsPanel.componentCount - 1)
+
+    return root
+}
+
+val tabProviders = mapOf<String, (List<DPData>) -> DPPanel>(
+    Pair(Assignment::class.java.name, ::assignmentTabProvider),
+    Pair(SubmissionsResponse::class.java.name, ::groupSubmissionsTabProvider)
+)
+
+class DPTab(val project: Project, val data: List<DPData>) : FileEditor {
+    fun getTab(className: String): JPanel = tabProviders[className]?.let {
+        it(data).apply { this.tab = this@DPTab }
+    } ?: JPanel()
+
+    val panel: JPanel = getTab(data.first().javaClass.name)
+
+    private val userData = UserDataHolderBase()
 
     override fun <T : Any?> getUserData(key: Key<T>): T? = userData.getUserData(key)
 
@@ -61,9 +120,9 @@ class DPTab(private val data: List<Assignment>) : FileEditor {
 
     override fun dispose() {  }
 
-    override fun getComponent(): JComponent = root
+    override fun getComponent(): JComponent = panel
 
-    override fun getPreferredFocusedComponent(): JComponent = root
+    override fun getPreferredFocusedComponent(): JComponent = panel
 
     override fun getName(): String = "DP"
 
@@ -80,4 +139,4 @@ class DPTab(private val data: List<Assignment>) : FileEditor {
     override fun getFile(): VirtualFile = VirtualFile(data)
 }
 
-class VirtualFile(val assignment: List<Assignment>) : LightVirtualFile()
+class VirtualFile(val data: List<DPData>) : LightVirtualFile()
