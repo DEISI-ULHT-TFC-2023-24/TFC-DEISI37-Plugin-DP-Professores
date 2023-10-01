@@ -88,7 +88,11 @@ fun groupSubmissionsTabProvider(data: List<DPData>) : DPPanel {
     root.add(submissionsPanel)
 
     submissions.forEach {
-        submissionsPanel.add(GroupSubmissionsComponent(it))
+        submissionsPanel.add(GroupSubmissionsComponent(it).apply {
+            this.addSubmissionDownloadClickListener { _ ->
+                SubmissionsAction.openSubmission(it.allSubmissions.first().id.toString())
+            }
+        })
 
         submissionsPanel.add(JSeparator(SwingConstants.HORIZONTAL).apply {
             maximumSize = Dimension(maximumSize.width, 2)
@@ -106,6 +110,7 @@ val tabProviders = mapOf<String, (List<DPData>) -> DPPanel>(
 )
 
 class DPTab(val project: Project, var data: List<DPData>) : FileEditor {
+    // TODO: Receive data from the caller, not the class instance
     fun getTab(className: String): JPanel = tabProviders[className]?.let {
         it(data).apply { this.tab = this@DPTab }
     } ?: JPanel()
