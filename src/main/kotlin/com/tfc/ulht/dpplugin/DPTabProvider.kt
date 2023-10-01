@@ -1,8 +1,6 @@
 package com.tfc.ulht.dpplugin
 
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileEditor
-import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.openapi.fileEditor.FileEditorProvider
 import com.intellij.openapi.fileEditor.FileEditorState
@@ -13,7 +11,9 @@ import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.util.ui.JBUI
-import com.tfc.ulht.dpplugin.dplib.*
+import com.tfc.ulht.dpplugin.dplib.Assignment
+import com.tfc.ulht.dpplugin.dplib.DPData
+import com.tfc.ulht.dpplugin.dplib.SubmissionsResponse
 import com.tfc.ulht.dpplugin.ui.AssignmentComponent
 import com.tfc.ulht.dpplugin.ui.GroupSubmissionsComponent
 import java.awt.Dimension
@@ -54,9 +54,9 @@ private fun assignmentTabProvider(data: List<DPData>) : DPPanel {
         assignmentsPanel.add(AssignmentComponent(it).apply { this.addSubmissionClickListener {
             State.client.getSubmissions(this.assignment.id) { subs ->
                 subs?.let { data ->
-                    ApplicationManager.getApplication().invokeLater {
-                        FileEditorManager.getInstance(root.tab.project).openFile(VirtualFile(data), true)
-                    }
+                    root.tab.data = data
+                    root.tab.panel.removeAll()
+                    root.tab.panel.add(root.tab.getTab(data.first().javaClass.name))
                 }
             }
         }})
@@ -105,12 +105,15 @@ val tabProviders = mapOf<String, (List<DPData>) -> DPPanel>(
     Pair(SubmissionsResponse::class.java.name, ::groupSubmissionsTabProvider)
 )
 
-class DPTab(val project: Project, val data: List<DPData>) : FileEditor {
+class DPTab(val project: Project, var data: List<DPData>) : FileEditor {
     fun getTab(className: String): JPanel = tabProviders[className]?.let {
         it(data).apply { this.tab = this@DPTab }
     } ?: JPanel()
 
-    val panel: JPanel = getTab(data.first().javaClass.name)
+    val panel: JPanel = JPanel().apply {
+        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        this.add(getTab(data.first().javaClass.name))
+    }
 
     private val userData = UserDataHolderBase()
 
