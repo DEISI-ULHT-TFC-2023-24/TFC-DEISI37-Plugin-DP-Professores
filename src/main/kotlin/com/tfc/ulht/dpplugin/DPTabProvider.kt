@@ -45,7 +45,7 @@ private fun assignmentTabProvider(data: List<DPData>) : DPPanel {
 
     val assignments = data as List<Assignment>
 
-    root.add(JLabel("<html><h1>Assignments</h1></html").apply { alignmentX = 0.0f })
+    root.add(JLabel("<html><h1>Assignments</h1></html>").apply { alignmentX = 0.0f })
     val assignmentsPanel = JPanel().apply {
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
         this.border = JBUI.Borders.empty(0, 10)
@@ -82,7 +82,7 @@ fun groupSubmissionsTabProvider(data: List<DPData>) : DPPanel {
 
     val submissions = data as List<SubmissionsResponse>
 
-    root.add(JLabel("<html><h1>Submissions</h1></html").apply { alignmentX = 0.0f })
+    root.add(JLabel("<html><h1>Submissions</h1></html>").apply { alignmentX = 0.0f })
     val submissionsPanel = JPanel().apply {
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
         this.border = JBUI.Borders.empty(0, 10)
@@ -120,7 +120,7 @@ fun submissionsTabProvider(data: List<DPData>) : DPPanel {
 
     val submissions = data as List<Submission>
 
-    root.add(JLabel("<html><h1>Submissions</h1></html").apply { alignmentX = 0.0f })
+    root.add(JLabel("<html><h1>Submissions</h1></html>").apply { alignmentX = 0.0f })
     val submissionsPanel = JPanel().apply {
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
         this.border = JBUI.Borders.empty(0, 10)
