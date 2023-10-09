@@ -172,9 +172,10 @@ class SubmissionComponent(val submission: Submission) : JComponent() {
     init {
         this.layout = BoxLayout(this, BoxLayout.X_AXIS)
         this.border = JBUI.Borders.empty(2, 0)
+        this.border = JBUI.Borders.empty(2, 0)
         this.alignmentX = 0.0f
 
-        idLabel = JLabel("${submission.id}: ${submission.submissionDate}")
+        idLabel = CustomLabel("${submission.id}: ${submission.submissionDate}")
         this.add(idLabel)
 
         this.add(Box.createHorizontalGlue())
