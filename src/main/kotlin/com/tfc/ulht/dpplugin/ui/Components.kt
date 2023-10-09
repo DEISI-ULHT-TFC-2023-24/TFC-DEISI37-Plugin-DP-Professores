@@ -1,6 +1,7 @@
 package com.tfc.ulht.dpplugin.ui
 
 import com.intellij.ui.JBColor
+import com.intellij.util.ui.JBUI
 import com.tfc.ulht.dpplugin.dplib.Assignment
 import com.tfc.ulht.dpplugin.dplib.Submission
 import com.tfc.ulht.dpplugin.dplib.SubmissionsResponse
@@ -21,9 +22,10 @@ class AssignmentComponent(val assignment: Assignment) : JComponent() {
 
     init {
         this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+        this.border = JBUI.Borders.empty(2, 0)
         this.alignmentX = 0.0f
 
-        idLabel = JLabel("<html><h3>${assignment.id}</h3></html>")
+        idLabel = CustomLabel(assignment.id)
         this.add(idLabel)
 
         this.add(Box.createHorizontalGlue())
@@ -61,11 +63,12 @@ class GroupSubmissionsComponent(submissions: SubmissionsResponse) : JComponent()
 
     init {
         this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+        this.border = JBUI.Borders.empty(2, 0)
         this.alignmentX = 0.0f
 
-        // TODO: Create new label class that mimics the <h3> tag without expanding infinitely
-        idLabel = JLabel(submissions.projectGroup.authors.joinToString { a -> "student" + a.id })
+        idLabel = CustomLabel(submissions.projectGroup.authors.joinToString { a -> "student" + a.id })
         this.add(idLabel)
+        this.add(Box.createRigidArea(Dimension(10, 0)))
         allSubmissions = NumberBox(submissions.allSubmissions.size)
         this.add(allSubmissions)
 
@@ -168,9 +171,10 @@ class SubmissionComponent(val submission: Submission) : JComponent() {
 
     init {
         this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+        this.border = JBUI.Borders.empty(2, 0)
         this.alignmentX = 0.0f
 
-        idLabel = JLabel("<html><h3>${submission.id}: ${submission.submissionDate}</h3></html>")
+        idLabel = JLabel("${submission.id}: ${submission.submissionDate}")
         this.add(idLabel)
 
         this.add(Box.createHorizontalGlue())
