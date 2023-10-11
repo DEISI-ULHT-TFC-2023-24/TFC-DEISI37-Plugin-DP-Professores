@@ -1,5 +1,6 @@
 package com.tfc.ulht.dpplugin
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.openapi.fileEditor.FileEditorProvider
@@ -10,6 +11,7 @@ import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
+import com.intellij.ui.components.JBLoadingPanel
 import com.intellij.util.ui.JBUI
 import com.tfc.ulht.dpplugin.dplib.Assignment
 import com.tfc.ulht.dpplugin.dplib.DPData
@@ -54,11 +56,17 @@ private fun assignmentTabProvider(data: List<DPData>) : DPPanel {
 
     assignments.forEach {
         assignmentsPanel.add(AssignmentComponent(it).apply { this.addSubmissionClickListener {
+            val loadingPanel = JBLoadingPanel(null, Disposable {  })
+            root.add(loadingPanel)
+            loadingPanel.startLoading()
+
             State.client.getSubmissions(this.assignment.id) { subs ->
                 subs?.let { data ->
+                    loadingPanel.stopLoading()
                     root.tab.data = data
                     root.tab.panel.removeAll()
                     root.tab.panel.add(root.tab.getTab(data.first().javaClass.name))
+                    root.tab.panel.repaint()
                 }
             }
         }})
@@ -98,7 +106,7 @@ fun groupSubmissionsTabProvider(data: List<DPData>) : DPPanel {
                 root.tab.data = it.allSubmissions
                 root.tab.panel.removeAll()
                 root.tab.panel.add(root.tab.getTab(it.allSubmissions.first().javaClass.name))
-                root.tab.panel.revalidate()
+                root.tab.panel.repaint()
             }
         })
 
