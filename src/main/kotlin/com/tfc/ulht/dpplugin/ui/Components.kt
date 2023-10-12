@@ -1,6 +1,7 @@
 package com.tfc.ulht.dpplugin.ui
 
 import com.intellij.ui.JBColor
+import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.tfc.ulht.dpplugin.dplib.Assignment
 import com.tfc.ulht.dpplugin.dplib.Submission
@@ -11,10 +12,35 @@ import java.awt.event.MouseListener
 import java.awt.font.TextAttribute
 import javax.swing.Box
 import javax.swing.BoxLayout
+import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JLabel
 
 // TODO: Create a component superclass
+
+class DashboardItemComponent(id: Int, text: String, icon: Icon?, listener: (Int) -> Unit) : JLabel(text, icon, LEFT) {
+    init {
+        this.foreground = JBColor.BLUE
+
+        this.font = JBFont.h2().deriveFont(JBFont.h2().attributes.toMutableMap().apply {
+            this[TextAttribute.UNDERLINE] = TextAttribute.UNDERLINE_ON
+        })
+
+        this.cursor = Cursor(Cursor.HAND_CURSOR)
+
+        this.addMouseListener(object : MouseListener {
+            override fun mouseClicked(e: MouseEvent?) = listener(id)
+
+            override fun mousePressed(e: MouseEvent?) {  }
+
+            override fun mouseReleased(e: MouseEvent?) {  }
+
+            override fun mouseEntered(e: MouseEvent?) {  }
+
+            override fun mouseExited(e: MouseEvent?) {  }
+        })
+    }
+}
 
 class AssignmentComponent(val assignment: Assignment) : JComponent() {
     val idLabel: JLabel
@@ -77,9 +103,9 @@ class GroupSubmissionsComponent(submissions: SubmissionsResponse) : JComponent()
         submissionDownloadLabel = JLabel("Download").apply {
             this.foreground = JBColor.BLUE
 
-            val style = this.font.attributes.toMutableMap()
-            style[TextAttribute.UNDERLINE] = TextAttribute.UNDERLINE_ON
-            this.font = this.font.deriveFont(style)
+            this.font = this.font.deriveFont(this.font.attributes.toMutableMap().apply {
+                this[TextAttribute.UNDERLINE] = TextAttribute.UNDERLINE_ON
+            })
 
             this.cursor = Cursor(Cursor.HAND_CURSOR)
         }

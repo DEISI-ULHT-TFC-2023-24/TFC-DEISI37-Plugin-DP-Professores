@@ -4,6 +4,8 @@ import kotlinx.serialization.Serializable
 
 interface DPData
 
+class Null : DPData
+
 @Serializable
 data class Instructions(val body: String, val format: String) : DPData
 

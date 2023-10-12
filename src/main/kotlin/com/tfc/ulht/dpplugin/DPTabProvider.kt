@@ -1,5 +1,6 @@
 package com.tfc.ulht.dpplugin
 
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorPolicy
@@ -7,17 +8,17 @@ import com.intellij.openapi.fileEditor.FileEditorProvider
 import com.intellij.openapi.fileEditor.FileEditorState
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.wm.WindowManager
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.components.JBLoadingPanel
 import com.intellij.util.ui.JBUI
-import com.tfc.ulht.dpplugin.dplib.Assignment
-import com.tfc.ulht.dpplugin.dplib.DPData
-import com.tfc.ulht.dpplugin.dplib.Submission
-import com.tfc.ulht.dpplugin.dplib.SubmissionsResponse
+import com.tfc.ulht.dpplugin.dplib.*
 import com.tfc.ulht.dpplugin.ui.AssignmentComponent
+import com.tfc.ulht.dpplugin.ui.DashboardItemComponent
 import com.tfc.ulht.dpplugin.ui.GroupSubmissionsComponent
 import com.tfc.ulht.dpplugin.ui.SubmissionComponent
 import java.awt.Dimension
@@ -36,6 +37,55 @@ class DPTabProvider : FileEditorProvider, DumbAware {
 
 class DPPanel : JPanel() {
     lateinit var tab: DPTab
+}
+
+private const val LOGIN_ID = 0
+private const val ASSIGNMENT_ID = 1
+
+private fun dashboardTabProvider(data: List<DPData>) : DPPanel {
+    val root = DPPanel().apply {
+        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        this.border = JBUI.Borders.empty(0, 20)
+    }
+
+    root.add(JLabel("<html><h1>Dashboard</h1></html>").apply { alignmentX = 0.0f })
+
+    val listener: (Int) -> Unit = {
+        when (it) {
+            LOGIN_ID -> LoginDialog(null).show()
+            ASSIGNMENT_ID -> {
+                val loadingPanel = JBLoadingPanel(null, Disposable {  })
+                root.add(loadingPanel)
+
+                loadingPanel.startLoading()
+
+                State.client.getAssignments { assignments ->
+                    if (assignments == null) {
+                        JDialog(WindowManager.getInstance().findVisibleFrame(), "Couldn't load assignments.").run {
+                            this.isVisible = true
+                        }
+
+                        loadingPanel.stopLoading()
+                        root.remove(loadingPanel)
+                    }
+
+                    assignments?.let { data ->
+                        loadingPanel.stopLoading()
+                        root.remove(loadingPanel)
+                        root.tab.data = data
+                        root.tab.panel.removeAll()
+                        root.tab.panel.add(root.tab.getTab(data.first().javaClass.name))
+                        root.tab.panel.repaint()
+                    }
+                }
+            }
+        }
+    }
+
+    root.add(DashboardItemComponent(LOGIN_ID, "Login", null, listener))
+    root.add(DashboardItemComponent(ASSIGNMENT_ID, "Assignments", IconLoader.getIcon("actions/listFiles.svg", AllIcons::class.java), listener))
+
+    return root
 }
 
 @Suppress("UNCHECKED_CAST")
@@ -58,11 +108,22 @@ private fun assignmentTabProvider(data: List<DPData>) : DPPanel {
         assignmentsPanel.add(AssignmentComponent(it).apply { this.addSubmissionClickListener {
             val loadingPanel = JBLoadingPanel(null, Disposable {  })
             root.add(loadingPanel)
+
             loadingPanel.startLoading()
 
             State.client.getSubmissions(this.assignment.id) { subs ->
+                if (subs == null) {
+                    JDialog(WindowManager.getInstance().findVisibleFrame(), "Couldn't load submissions.").run {
+                        this.isVisible = true
+                    }
+
+                    loadingPanel.stopLoading()
+                    root.remove(loadingPanel)
+                }
+
                 subs?.let { data ->
                     loadingPanel.stopLoading()
+                    root.remove(loadingPanel)
                     root.tab.data = data
                     root.tab.panel.removeAll()
                     root.tab.panel.add(root.tab.getTab(data.first().javaClass.name))
@@ -153,6 +214,7 @@ fun submissionsTabProvider(data: List<DPData>) : DPPanel {
 }
 
 val tabProviders = mapOf<String, (List<DPData>) -> DPPanel>(
+    Pair(Null::class.java.name, ::dashboardTabProvider),
     Pair(Assignment::class.java.name, ::assignmentTabProvider),
     Pair(SubmissionsResponse::class.java.name, ::groupSubmissionsTabProvider),
     Pair(Submission::class.java.name, ::submissionsTabProvider)

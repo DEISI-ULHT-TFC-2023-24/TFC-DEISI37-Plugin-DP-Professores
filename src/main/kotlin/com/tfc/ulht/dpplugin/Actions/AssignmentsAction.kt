@@ -1,4 +1,4 @@
-package com.tfc.ulht.dpplugin
+package com.tfc.ulht.dpplugin.Actions
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.AnAction
@@ -6,6 +6,8 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.ui.components.JBLoadingPanel
+import com.tfc.ulht.dpplugin.State
+import com.tfc.ulht.dpplugin.VirtualFile
 
 class AssignmentsAction : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {

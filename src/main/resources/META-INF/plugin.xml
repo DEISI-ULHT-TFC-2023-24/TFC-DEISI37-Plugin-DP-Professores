@@ -36,8 +36,9 @@
     <actions>
         <group id="dp-group" text="DP" popup="true">
             <add-to-group group-id="MainMenu" anchor="last"/>
-            <action class="com.tfc.ulht.dpplugin.LoginAction" id="dp.login" text="Login"/>
-            <action class="com.tfc.ulht.dpplugin.AssignmentsAction" id="dp.assignments" text="Assignments"/>
+            <action class="com.tfc.ulht.dpplugin.Actions.LoginAction" id="dp.login" text="Login"/>
+            <action class="com.tfc.ulht.dpplugin.Actions.AssignmentsAction" id="dp.assignments" text="Assignments"/>
+            <action class="com.tfc.ulht.dpplugin.Actions.DashboardAction" id="dp.dashboard" text="Dashboard"/>
         </group>
     </actions>
 </idea-plugin>
