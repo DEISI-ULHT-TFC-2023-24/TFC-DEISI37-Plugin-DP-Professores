@@ -21,6 +21,7 @@ import com.tfc.ulht.dpplugin.ui.AssignmentComponent
 import com.tfc.ulht.dpplugin.ui.DashboardItemComponent
 import com.tfc.ulht.dpplugin.ui.GroupSubmissionsComponent
 import com.tfc.ulht.dpplugin.ui.SubmissionComponent
+import java.awt.Component
 import java.awt.Dimension
 import java.beans.PropertyChangeListener
 import javax.swing.*
@@ -28,22 +29,51 @@ import javax.swing.*
 class DPTabProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile): Boolean = file is com.tfc.ulht.dpplugin.VirtualFile
 
-    override fun createEditor(project: Project, file: VirtualFile): FileEditor = DPTab(project, (file as com.tfc.ulht.dpplugin.VirtualFile).data)
+    override fun createEditor(project: Project, file: VirtualFile): FileEditor = DPTabHolder(project, (file as com.tfc.ulht.dpplugin.VirtualFile).data)
 
     override fun getEditorTypeId(): String = "dp-editor"
 
     override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.HIDE_DEFAULT_EDITOR
 }
 
-class DPPanel : JPanel() {
-    lateinit var tab: DPTab
+open class DPTab : JPanel() {
+    lateinit var holder: DPTabHolder
+}
+
+open class DPListTab<T : Component>(title: String): DPTab() {
+    private val items: MutableList<T> = mutableListOf()
+    private val itemsPanel: JPanel = JPanel().apply {
+        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        this.border = JBUI.Borders.empty(0, 10)
+    }
+
+    init {
+        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        this.border = JBUI.Borders.empty(0, 20)
+
+        this.add(JLabel("<html><h1>$title</h1></html>").apply { alignmentX = 0.0f })
+        this.add(itemsPanel)
+    }
+
+    fun addItem(component: T) {
+        if (items.isNotEmpty()) {
+            itemsPanel.add(JSeparator(SwingConstants.HORIZONTAL).apply {
+                maximumSize = Dimension(maximumSize.width, 2)
+            })
+        }
+
+        items.add(component)
+
+        itemsPanel.add(component)
+    }
 }
 
 private const val LOGIN_ID = 0
 private const val ASSIGNMENT_ID = 1
 
-private fun dashboardTabProvider(data: List<DPData>) : DPPanel {
-    val root = DPPanel().apply {
+@Suppress("UNUSED_PARAMETER")
+private fun dashboardTabProvider(data: List<DPData>) : DPTab {
+    val root = DPTab().apply {
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
         this.border = JBUI.Borders.empty(0, 20)
     }
@@ -72,10 +102,10 @@ private fun dashboardTabProvider(data: List<DPData>) : DPPanel {
                     assignments?.let { data ->
                         loadingPanel.stopLoading()
                         root.remove(loadingPanel)
-                        root.tab.data = data
-                        root.tab.panel.removeAll()
-                        root.tab.panel.add(root.tab.getTab(data.first().javaClass.name))
-                        root.tab.panel.repaint()
+                        root.holder.data = data
+                        root.holder.panel.removeAll()
+                        root.holder.panel.add(root.holder.getTab(data.first().javaClass.name))
+                        root.holder.panel.repaint()
                     }
                 }
             }
@@ -89,23 +119,13 @@ private fun dashboardTabProvider(data: List<DPData>) : DPPanel {
 }
 
 @Suppress("UNCHECKED_CAST")
-private fun assignmentTabProvider(data: List<DPData>) : DPPanel {
-    val root = DPPanel().apply {
-        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        this.border = JBUI.Borders.empty(0, 20)
-    }
+private fun assignmentTabProvider(data: List<DPData>) : DPListTab<AssignmentComponent> {
+    val root = DPListTab<AssignmentComponent>("Assignments")
 
     val assignments = data as List<Assignment>
 
-    root.add(JLabel("<html><h1>Assignments</h1></html>").apply { alignmentX = 0.0f })
-    val assignmentsPanel = JPanel().apply {
-        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        this.border = JBUI.Borders.empty(0, 10)
-    }
-    root.add(assignmentsPanel)
-
     assignments.forEach {
-        assignmentsPanel.add(AssignmentComponent(it).apply { this.addSubmissionClickListener {
+        root.addItem(AssignmentComponent(it).apply { this.addSubmissionClickListener {
             val loadingPanel = JBLoadingPanel(null, Disposable {  })
             root.add(loadingPanel)
 
@@ -124,106 +144,69 @@ private fun assignmentTabProvider(data: List<DPData>) : DPPanel {
                 subs?.let { data ->
                     loadingPanel.stopLoading()
                     root.remove(loadingPanel)
-                    root.tab.data = data
-                    root.tab.panel.removeAll()
-                    root.tab.panel.add(root.tab.getTab(data.first().javaClass.name))
-                    root.tab.panel.repaint()
+                    root.holder.data = data
+                    root.holder.panel.removeAll()
+                    root.holder.panel.add(root.holder.getTab(data.first().javaClass.name))
+                    root.holder.panel.repaint()
                 }
             }
         }})
-
-        assignmentsPanel.add(JSeparator(SwingConstants.HORIZONTAL).apply {
-            maximumSize = Dimension(maximumSize.width, 2)
-        })
     }
-
-    if (assignmentsPanel.componentCount > 1) assignmentsPanel.remove(assignmentsPanel.componentCount - 1)
 
     return root
 }
 
 @Suppress("UNCHECKED_CAST")
-fun groupSubmissionsTabProvider(data: List<DPData>) : DPPanel {
-    val root = DPPanel().apply {
-        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        this.border = JBUI.Borders.empty(0, 20)
-    }
+fun groupSubmissionsTabProvider(data: List<DPData>) : DPListTab<GroupSubmissionsComponent> {
+    val root = DPListTab<GroupSubmissionsComponent>("Submissions")
 
     val submissions = data as List<SubmissionsResponse>
 
-    root.add(JLabel("<html><h1>Submissions</h1></html>").apply { alignmentX = 0.0f })
-    val submissionsPanel = JPanel().apply {
-        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        this.border = JBUI.Borders.empty(0, 10)
-    }
-    root.add(submissionsPanel)
-
     submissions.forEach {
-        submissionsPanel.add(GroupSubmissionsComponent(it).apply {
+        root.addItem(GroupSubmissionsComponent(it).apply {
             this.addSubmissionDownloadClickListener { _ ->
                 SubmissionsAction.openSubmission(it.allSubmissions.first().id.toString())
             }
             this.addAllSubmissionsClickListener {
-                root.tab.data = it.allSubmissions
-                root.tab.panel.removeAll()
-                root.tab.panel.add(root.tab.getTab(it.allSubmissions.first().javaClass.name))
-                root.tab.panel.repaint()
+                root.holder.data = it.allSubmissions
+                root.holder.panel.removeAll()
+                root.holder.panel.add(root.holder.getTab(it.allSubmissions.first().javaClass.name))
+                root.holder.panel.repaint()
             }
         })
-
-        submissionsPanel.add(JSeparator(SwingConstants.HORIZONTAL).apply {
-            maximumSize = Dimension(maximumSize.width, 2)
-        })
     }
-
-    if (submissionsPanel.componentCount > 1) submissionsPanel.remove(submissionsPanel.componentCount - 1)
 
     return root
 }
+
 @Suppress("UNCHECKED_CAST")
-fun submissionsTabProvider(data: List<DPData>) : DPPanel {
-    val root = DPPanel().apply {
-        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        this.border = JBUI.Borders.empty(0, 20)
-    }
+fun submissionsTabProvider(data: List<DPData>) : DPListTab<SubmissionComponent> {
+    val root = DPListTab<SubmissionComponent>("Submissions")
 
     val submissions = data as List<Submission>
 
-    root.add(JLabel("<html><h1>Submissions</h1></html>").apply { alignmentX = 0.0f })
-    val submissionsPanel = JPanel().apply {
-        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        this.border = JBUI.Borders.empty(0, 10)
-    }
-    root.add(submissionsPanel)
-
     submissions.forEach {
-        submissionsPanel.add(SubmissionComponent(it).apply {
+        root.addItem(SubmissionComponent(it).apply {
             this.addSubmissionDownloadClickListener {
                 SubmissionsAction.openSubmission(this.submission.id.toString())
             }
         })
-
-        submissionsPanel.add(JSeparator(SwingConstants.HORIZONTAL).apply {
-            maximumSize = Dimension(maximumSize.width, 2)
-        })
     }
-
-    if (submissionsPanel.componentCount > 1) submissionsPanel.remove(submissionsPanel.componentCount - 1)
 
     return root
 }
 
-val tabProviders = mapOf<String, (List<DPData>) -> DPPanel>(
+val tabProviders = mapOf<String, (List<DPData>) -> DPTab>(
     Pair(Null::class.java.name, ::dashboardTabProvider),
     Pair(Assignment::class.java.name, ::assignmentTabProvider),
     Pair(SubmissionsResponse::class.java.name, ::groupSubmissionsTabProvider),
     Pair(Submission::class.java.name, ::submissionsTabProvider)
 )
 
-class DPTab(val project: Project, var data: List<DPData>) : FileEditor {
+class DPTabHolder(val project: Project, var data: List<DPData>) : FileEditor {
     // TODO: Receive data from the caller, not the class instance
     fun getTab(className: String): JPanel = tabProviders[className]?.let {
-        it(data).apply { this.tab = this@DPTab }
+        it(data).apply { this.holder = this@DPTabHolder }
     } ?: JPanel()
 
     val panel: JPanel = JPanel().apply {

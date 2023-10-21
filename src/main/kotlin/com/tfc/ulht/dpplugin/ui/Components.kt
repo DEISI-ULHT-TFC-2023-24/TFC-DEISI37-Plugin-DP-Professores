@@ -11,12 +11,11 @@ import java.awt.event.MouseEvent
 import java.awt.event.MouseListener
 import java.awt.font.TextAttribute
 import javax.swing.Box
+import javax.swing.Box.Filler
 import javax.swing.BoxLayout
 import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JLabel
-
-// TODO: Create a component superclass
 
 class DashboardItemComponent(id: Int, text: String, icon: Icon?, listener: (Int) -> Unit) : JLabel(text, icon, LEFT) {
     init {
@@ -42,19 +41,42 @@ class DashboardItemComponent(id: Int, text: String, icon: Icon?, listener: (Int)
     }
 }
 
-class AssignmentComponent(val assignment: Assignment) : JComponent() {
-    val idLabel: JLabel
-    val submissionsLabel: JLabel
+open class DPComponent : JComponent() {
+    val fillers: MutableList<Component> = mutableListOf()
 
     init {
         this.layout = BoxLayout(this, BoxLayout.X_AXIS)
         this.border = JBUI.Borders.empty(2, 0)
         this.alignmentX = 0.0f
 
-        idLabel = CustomLabel(assignment.id)
-        this.add(idLabel)
-
         this.add(Box.createHorizontalGlue())
+    }
+
+    protected fun addComponent(component: Component) {
+        if (component is Filler) {
+            fillers.add(component)
+        }
+
+        for (i in 0..components.size) {
+            if (components[i] is Filler && !fillers.contains(components[i])) {
+                add(component, i)
+                return
+            }
+        }
+
+        add(component, -1)
+    }
+
+    protected fun addComponentEnd(component: JComponent) = add(component, -1)
+}
+
+class AssignmentComponent(val assignment: Assignment) : DPComponent() {
+    val idLabel: JLabel
+    val submissionsLabel: JLabel
+
+    init {
+        idLabel = CustomLabel(assignment.id)
+        this.addComponent(idLabel)
 
         submissionsLabel = JLabel("Submissions").apply {
             this.foreground = JBColor.BLUE
@@ -66,7 +88,7 @@ class AssignmentComponent(val assignment: Assignment) : JComponent() {
             this.cursor = Cursor(Cursor.HAND_CURSOR)
         }
 
-        this.add(submissionsLabel)
+        this.addComponentEnd(submissionsLabel)
     }
 
     fun addSubmissionClickListener(listener: (MouseEvent?) -> Unit) = submissionsLabel.addMouseListener(object : MouseListener {
@@ -82,23 +104,17 @@ class AssignmentComponent(val assignment: Assignment) : JComponent() {
     })
 }
 
-class GroupSubmissionsComponent(submissions: SubmissionsResponse) : JComponent() {
+class GroupSubmissionsComponent(submissions: SubmissionsResponse) : DPComponent() {
     private val idLabel: JLabel
     private val allSubmissions: NumberBox
     private val submissionDownloadLabel: JLabel
 
     init {
-        this.layout = BoxLayout(this, BoxLayout.X_AXIS)
-        this.border = JBUI.Borders.empty(2, 0)
-        this.alignmentX = 0.0f
-
         idLabel = CustomLabel(submissions.projectGroup.authors.joinToString { a -> "student" + a.id })
-        this.add(idLabel)
-        this.add(Box.createRigidArea(Dimension(10, 0)))
+        this.addComponent(idLabel)
+        this.addComponent(Box.createRigidArea(Dimension(10, 0)))
         allSubmissions = NumberBox(submissions.allSubmissions.size)
-        this.add(allSubmissions)
-
-        this.add(Box.createHorizontalGlue())
+        this.addComponent(allSubmissions)
 
         submissionDownloadLabel = JLabel("Download").apply {
             this.foreground = JBColor.BLUE
@@ -110,7 +126,7 @@ class GroupSubmissionsComponent(submissions: SubmissionsResponse) : JComponent()
             this.cursor = Cursor(Cursor.HAND_CURSOR)
         }
 
-        this.add(submissionDownloadLabel)
+        this.addComponentEnd(submissionDownloadLabel)
     }
 
     fun addSubmissionDownloadClickListener(listener: (MouseEvent?) -> Unit) = submissionDownloadLabel.addMouseListener(object : MouseListener {
@@ -191,19 +207,13 @@ class NumberBox(number: Int) : JComponent() {
     }
 }
 
-class SubmissionComponent(val submission: Submission) : JComponent() {
+class SubmissionComponent(val submission: Submission) : DPComponent() {
     private val idLabel: JLabel
     private val submissionDownloadLabel: JLabel
 
     init {
-        this.layout = BoxLayout(this, BoxLayout.X_AXIS)
-        this.border = JBUI.Borders.empty(2, 0)
-        this.alignmentX = 0.0f
-
         idLabel = CustomLabel("${submission.id}: ${submission.submissionDate}")
-        this.add(idLabel)
-
-        this.add(Box.createHorizontalGlue())
+        this.addComponent(idLabel)
 
         submissionDownloadLabel = JLabel("Download").apply {
             this.foreground = JBColor.BLUE
@@ -215,7 +225,7 @@ class SubmissionComponent(val submission: Submission) : JComponent() {
             this.cursor = Cursor(Cursor.HAND_CURSOR)
         }
 
-        this.add(submissionDownloadLabel)
+        this.addComponentEnd(submissionDownloadLabel)
     }
 
     fun addSubmissionDownloadClickListener(listener: (MouseEvent?) -> Unit) = submissionDownloadLabel.addMouseListener(object : MouseListener {
