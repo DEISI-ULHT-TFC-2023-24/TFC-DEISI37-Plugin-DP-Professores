@@ -78,6 +78,11 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent() {
         idLabel = CustomLabel(assignment.id)
         this.addComponent(idLabel)
 
+        assignment.dueDate?.let {
+            this.addComponent(Box.createRigidArea(Dimension(10, 0)))
+            this.addComponent(LabelWithDescription(it, "due"))
+        }
+
         submissionsLabel = JLabel("Submissions").apply {
             this.foreground = JBColor.BLUE
 
@@ -146,6 +151,19 @@ class GroupSubmissionsComponent(submissions: SubmissionsResponse) : DPComponent(
     }
 }
 
+class LabelWithDescription(text: String, description: String) : JComponent() {
+    init {
+        this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+
+        this.add(JLabel("$description:").apply {
+            this.font = JBFont.small().asBold()
+            this.alignmentY = 0.4f
+        })
+
+        this.add(JLabel(text))
+    }
+}
+
 class NumberBox(number: Int) : JComponent() {
     private val numString = number.toString()
     var mouseOver = false
@@ -196,13 +214,8 @@ class NumberBox(number: Int) : JComponent() {
 
         g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
         val rec = g.getFont().getStringBounds(numString, g2.fontRenderContext)
-        g.drawChars(
-            numString.toCharArray(),
-            0,
-            numString.length,
-            (width / 2 - rec.width / 2).toInt() + 1,
-            (height / 2 - rec.y / 2).toInt()
-        )
+        g.drawString(numString, (width / 2 - rec.width / 2).toInt() + 1, (height / 2 - rec.y / 2).toInt())
+
         super.paintComponent(g)
     }
 }
