@@ -83,6 +83,9 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent() {
             this.addComponent(LabelWithDescription(it, "due"))
         }
 
+        this.addComponent(Box.createRigidArea(Dimension(10, 0)))
+        this.addComponent(LabelWithDescription(assignment.numSubmissions.toString(), "submissions"))
+
         submissionsLabel = JLabel("Submissions").apply {
             this.foreground = JBColor.BLUE
 

@@ -18,7 +18,8 @@ data class Assignment(
     val language: String,
     val name: String,
     val packageName: String,
-    val submissionMethod: String
+    val submissionMethod: String,
+    val numSubmissions: Int,
 ) : DPData
 
 @Serializable
