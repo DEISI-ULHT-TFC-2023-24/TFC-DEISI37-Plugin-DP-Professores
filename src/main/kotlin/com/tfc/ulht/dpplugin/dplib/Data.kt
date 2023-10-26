@@ -42,7 +42,9 @@ data class TestResult(
     val failureType: String?,
     val failureErrorLine: String?,
     val failureDetail: String?
-) : DPData
+) : DPData {
+    fun isSuccessful(): Boolean = type == "SUCCESS"
+}
 
 @Serializable
 data class Submission(

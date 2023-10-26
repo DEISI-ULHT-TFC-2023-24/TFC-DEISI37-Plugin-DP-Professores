@@ -6,6 +6,7 @@ import com.intellij.util.ui.JBUI
 import com.tfc.ulht.dpplugin.dplib.Assignment
 import com.tfc.ulht.dpplugin.dplib.Submission
 import com.tfc.ulht.dpplugin.dplib.SubmissionsResponse
+import com.tfc.ulht.dpplugin.dplib.TestResult
 import java.awt.*
 import java.awt.event.MouseEvent
 import java.awt.event.MouseListener
@@ -112,17 +113,40 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent() {
     })
 }
 
+class TestResultsComponent(results: List<TestResult>) : JLabel() {
+    init {
+        val successCount = results.fold(0) { acc, testResult -> acc + if (testResult.isSuccessful()) 1 else 0 }
+        this.text = "${successCount}/${results.size}"
+
+        (if (successCount >= results.size) JBColor.GREEN else JBColor.RED).run {
+            this@TestResultsComponent.foreground = this
+        }
+    }
+}
+
 class GroupSubmissionsComponent(submissions: SubmissionsResponse) : DPComponent() {
     private val idLabel: JLabel
     private val allSubmissions: NumberBox
     private val submissionDownloadLabel: JLabel
 
     init {
-        idLabel = CustomLabel(submissions.projectGroup.authors.joinToString { a -> "student" + a.id })
+        idLabel = CustomLabel(submissions.projectGroup.authors.joinToString(separator = ",") { "${it.id}-${it.name}" })
         this.addComponent(idLabel)
+
+        this.addComponent(Box.createRigidArea(Dimension(10, 0)))
+        this.addComponent(LabelWithDescription(submissions.allSubmissions.first().submissionDate, "last submission"))
+
+        this.addComponent(Box.createRigidArea(Dimension(10, 0)))
+        this.addComponent(LabelWithDescription(submissions.allSubmissions.first().status, "last status"))
+
         this.addComponent(Box.createRigidArea(Dimension(10, 0)))
         allSubmissions = NumberBox(submissions.allSubmissions.size)
         this.addComponent(allSubmissions)
+
+        submissions.allSubmissions.first().testResults?.let {
+            this.addComponent(Box.createRigidArea(Dimension(10, 0)))
+            this.addComponent(TestResultsComponent(it))
+        }
 
         submissionDownloadLabel = JLabel("Download").apply {
             this.foreground = JBColor.BLUE
@@ -240,6 +264,12 @@ class SubmissionComponent(val submission: Submission) : DPComponent() {
 
             this.cursor = Cursor(Cursor.HAND_CURSOR)
         }
+
+        submission.testResults?.let {
+            this.addComponent(Box.createRigidArea(Dimension(10, 0)))
+            this.addComponent(TestResultsComponent(it))
+        }
+
 
         this.addComponentEnd(submissionDownloadLabel)
     }
