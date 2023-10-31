@@ -3,10 +3,7 @@ package com.tfc.ulht.dpplugin.ui
 import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
-import com.tfc.ulht.dpplugin.dplib.Assignment
-import com.tfc.ulht.dpplugin.dplib.Submission
-import com.tfc.ulht.dpplugin.dplib.SubmissionsResponse
-import com.tfc.ulht.dpplugin.dplib.TestResult
+import com.tfc.ulht.dpplugin.dplib.*
 import java.awt.*
 import java.awt.event.MouseEvent
 import java.awt.event.MouseListener
@@ -53,12 +50,12 @@ open class DPComponent : JComponent() {
         this.add(Box.createHorizontalGlue())
     }
 
-    protected fun addComponent(component: Component) {
+    fun addComponent(component: Component) {
         if (component is Filler) {
             fillers.add(component)
         }
 
-        for (i in 0..components.size) {
+        for (i in components.indices) {
             if (components[i] is Filler && !fillers.contains(components[i])) {
                 add(component, i)
                 return
@@ -68,7 +65,7 @@ open class DPComponent : JComponent() {
         add(component, -1)
     }
 
-    protected fun addComponentEnd(component: JComponent) = add(component, -1)
+    protected fun addComponentEnd(component: Component) = add(component, -1)
 }
 
 class AssignmentComponent(val assignment: Assignment) : DPComponent() {
@@ -128,6 +125,7 @@ class GroupSubmissionsComponent(submissions: SubmissionsResponse) : DPComponent(
     private val idLabel: JLabel
     private val allSubmissions: NumberBox
     private val submissionDownloadLabel: JLabel
+    private val buildReportLabel: JLabel
 
     init {
         idLabel = CustomLabel(submissions.projectGroup.authors.joinToString(separator = ",") { "${it.id}-${it.name}" })
@@ -148,6 +146,16 @@ class GroupSubmissionsComponent(submissions: SubmissionsResponse) : DPComponent(
             this.addComponent(TestResultsComponent(it))
         }
 
+        buildReportLabel = JLabel("Build Report").apply {
+            this.foreground = JBColor.BLUE
+
+            this.font = this.font.deriveFont(this.font.attributes.toMutableMap().apply {
+                this[TextAttribute.UNDERLINE] = TextAttribute.UNDERLINE_ON
+            })
+
+            this.cursor = Cursor(Cursor.HAND_CURSOR)
+        }
+        
         submissionDownloadLabel = JLabel("Download").apply {
             this.foreground = JBColor.BLUE
 
@@ -157,11 +165,25 @@ class GroupSubmissionsComponent(submissions: SubmissionsResponse) : DPComponent(
 
             this.cursor = Cursor(Cursor.HAND_CURSOR)
         }
-
+        
+        this.addComponentEnd(buildReportLabel)
+        this.addComponentEnd(Box.createRigidArea(Dimension(10, 0)))
         this.addComponentEnd(submissionDownloadLabel)
     }
 
     fun addSubmissionDownloadClickListener(listener: (MouseEvent?) -> Unit) = submissionDownloadLabel.addMouseListener(object : MouseListener {
+        override fun mouseClicked(e: MouseEvent?) = listener(e)
+
+        override fun mousePressed(e: MouseEvent?) {  }
+
+        override fun mouseReleased(e: MouseEvent?) {  }
+
+        override fun mouseEntered(e: MouseEvent?) {  }
+
+        override fun mouseExited(e: MouseEvent?) {  }
+    })
+
+    fun addBuildReportClickListener(listener: (MouseEvent?) -> Unit) = buildReportLabel.addMouseListener(object : MouseListener {
         override fun mouseClicked(e: MouseEvent?) = listener(e)
 
         override fun mousePressed(e: MouseEvent?) {  }
@@ -285,4 +307,17 @@ class SubmissionComponent(val submission: Submission) : DPComponent() {
 
         override fun mouseExited(e: MouseEvent?) {  }
     })
+}
+
+class SubmissionReportComponent(report: SubmissionReport) : DPComponent() {
+    init {
+        this.addComponent(JLabel(report.reportKey))
+        this.addComponentEnd(JLabel(report.reportValue))
+    }
+}
+
+class BuildReportComponent(report: BuildReport) : DPComponent() {
+    init {
+        this.addComponent(JLabel(report.junitSummaryTeacher))
+    }
 }

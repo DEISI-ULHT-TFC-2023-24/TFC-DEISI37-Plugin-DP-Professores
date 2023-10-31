@@ -17,10 +17,7 @@ import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.components.JBLoadingPanel
 import com.intellij.util.ui.JBUI
 import com.tfc.ulht.dpplugin.dplib.*
-import com.tfc.ulht.dpplugin.ui.AssignmentComponent
-import com.tfc.ulht.dpplugin.ui.DashboardItemComponent
-import com.tfc.ulht.dpplugin.ui.GroupSubmissionsComponent
-import com.tfc.ulht.dpplugin.ui.SubmissionComponent
+import com.tfc.ulht.dpplugin.ui.*
 import java.awt.Component
 import java.awt.Dimension
 import java.beans.PropertyChangeListener
@@ -36,11 +33,80 @@ class DPTabProvider : FileEditorProvider, DumbAware {
     override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.HIDE_DEFAULT_EDITOR
 }
 
-open class DPTab : JPanel() {
+open class DPTab : JScrollPane(VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_NEVER) {
     lateinit var holder: DPTabHolder
+    var parent: DPTab? = null
+    var next: DPTab? = null
+
+    val backButton: JButton
+    val forwardButton: JButton
+
+    val rootPanel = JPanel()
+
+    init {
+        /*val navigationButtonsPanel = JPanel().apply {
+            this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+        }*/
+
+        this.setViewportView(rootPanel)
+
+        backButton = JButton(AllIcons.Actions.Back).apply {
+            this.addActionListener {
+                navigateBackwards()
+            }
+        }
+
+        forwardButton = JButton(AllIcons.Actions.Forward).apply {
+            this.addActionListener {
+                navigateForward()
+            }
+        }
+
+        updateNavButtons()
+
+        // navigationButtonsPanel.add(backButton)
+        // navigationButtonsPanel.add(forwardButton)
+
+        rootPanel.add(backButton)
+        rootPanel.add(forwardButton)
+    }
+
+    private fun updateNavButtons() {
+        backButton.isEnabled = parent != null
+        forwardButton.isEnabled = next != null
+    }
+
+    fun navigateForward(tab: DPTab) {
+        next = tab
+        navigateForward()
+    }
+
+    private fun navigateForward() = next?.let {
+        it.parent = this
+
+        SwingUtilities.invokeLater {
+            holder.panel.removeAll()
+            holder.panel.add(it)
+            it.updateNavButtons()
+
+            holder.panel.revalidate()
+            holder.panel.repaint()
+        }
+    }
+
+    private fun navigateBackwards() = parent?.let {
+        SwingUtilities.invokeLater {
+            holder.panel.removeAll()
+            holder.panel.add(it)
+            it.updateNavButtons()
+
+            holder.panel.revalidate()
+            holder.panel.repaint()
+        }
+    }
 }
 
-open class DPListTab<T : Component>(title: String): DPTab() {
+open class DPListTab<T : Component>(title: String) : DPTab() {
     private val items: MutableList<T> = mutableListOf()
     private val itemsPanel: JPanel = JPanel().apply {
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
@@ -48,11 +114,11 @@ open class DPListTab<T : Component>(title: String): DPTab() {
     }
 
     init {
-        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        this.border = JBUI.Borders.empty(0, 20)
+        rootPanel.layout = BoxLayout(rootPanel, BoxLayout.Y_AXIS)
+        rootPanel.border = JBUI.Borders.empty(0, 20)
 
-        this.add(JLabel("<html><h1>$title</h1></html>").apply { alignmentX = 0.0f })
-        this.add(itemsPanel)
+        rootPanel.add(JLabel("<html><h1>$title</h1></html>").apply { alignmentX = 0.0f })
+        rootPanel.add(itemsPanel)
     }
 
     fun addItem(component: T) {
@@ -103,9 +169,7 @@ private fun dashboardTabProvider(data: List<DPData>) : DPTab {
                         loadingPanel.stopLoading()
                         root.remove(loadingPanel)
                         root.holder.data = data
-                        root.holder.panel.removeAll()
-                        root.holder.panel.add(root.holder.getTab(data.first().javaClass.name))
-                        root.holder.panel.repaint()
+                        root.navigateForward((root.holder.getTab(data.first().javaClass.name) as DPTab))
                     }
                 }
             }
@@ -145,9 +209,7 @@ private fun assignmentTabProvider(data: List<DPData>) : DPListTab<AssignmentComp
                     loadingPanel.stopLoading()
                     root.remove(loadingPanel)
                     root.holder.data = data
-                    root.holder.panel.removeAll()
-                    root.holder.panel.add(root.holder.getTab(data.first().javaClass.name))
-                    root.holder.panel.repaint()
+                    root.navigateForward((root.holder.getTab(data.first().javaClass.name) as DPTab))
                 }
             }
         }})
@@ -164,14 +226,30 @@ fun groupSubmissionsTabProvider(data: List<DPData>) : DPListTab<GroupSubmissions
 
     submissions.forEach {
         root.addItem(GroupSubmissionsComponent(it).apply {
+            this.addBuildReportClickListener { _ ->
+                val loadingPanel = JBLoadingPanel(null, Disposable {  })
+                root.add(loadingPanel)
+
+                State.client.getBuildReport(it.allSubmissions.first().id.toString()) { report ->
+                    if (report == null) {
+                        loadingPanel.stopLoading()
+                        root.remove(loadingPanel)
+                    }
+
+                    report?.let { data ->
+                        loadingPanel.stopLoading()
+                        root.remove(loadingPanel)
+                        root.holder.data = listOf(data)
+                        root.navigateForward((root.holder.getTab(data.javaClass.name) as DPTab))
+                    }
+                }
+            }
             this.addSubmissionDownloadClickListener { _ ->
                 SubmissionsAction.openSubmission(it.allSubmissions.first().id.toString())
             }
             this.addAllSubmissionsClickListener {
                 root.holder.data = it.allSubmissions
-                root.holder.panel.removeAll()
-                root.holder.panel.add(root.holder.getTab(it.allSubmissions.first().javaClass.name))
-                root.holder.panel.repaint()
+                root.navigateForward((root.holder.getTab(it.allSubmissions.first().javaClass.name) as DPTab))
             }
         })
     }
@@ -196,16 +274,36 @@ fun submissionsTabProvider(data: List<DPData>) : DPListTab<SubmissionComponent> 
     return root
 }
 
+@Suppress("UNCHECKED_CAST")
+fun buildReportTabProvider(data: List<DPData>) : DPListTab<Component> {
+    val root = DPListTab<Component>("Build Report")
+
+    val report = (data as List<FullBuildReport>).first()
+
+    /*root.addItem(DPComponent().apply {
+        
+    })*/
+
+    report.summary?.forEach {
+        root.addItem(SubmissionReportComponent(it))
+    }
+
+    report.buildReport?.let { root.addItem(BuildReportComponent(it)) }
+
+    return root
+}
+
 val tabProviders = mapOf<String, (List<DPData>) -> DPTab>(
     Pair(Null::class.java.name, ::dashboardTabProvider),
     Pair(Assignment::class.java.name, ::assignmentTabProvider),
     Pair(SubmissionsResponse::class.java.name, ::groupSubmissionsTabProvider),
-    Pair(Submission::class.java.name, ::submissionsTabProvider)
+    Pair(Submission::class.java.name, ::submissionsTabProvider),
+    Pair(FullBuildReport::class.java.name, ::buildReportTabProvider)
 )
 
 class DPTabHolder(val project: Project, var data: List<DPData>) : FileEditor {
     // TODO: Receive data from the caller, not the class instance
-    fun getTab(className: String): JPanel = tabProviders[className]?.let {
+    fun getTab(className: String): JComponent = tabProviders[className]?.let {
         it(data).apply { this.holder = this@DPTabHolder }
     } ?: JPanel()
 

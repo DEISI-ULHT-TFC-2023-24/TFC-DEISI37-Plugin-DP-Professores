@@ -221,4 +221,39 @@ class DPClient {
             }
         })
     }
+
+    fun getBuildReport(submissionId: String, callback: ((FullBuildReport?) -> Unit)) {
+        if (!loggedIn) {
+            callback(null)
+            return
+        }
+
+        val request = Request.Builder()
+            .url(BASE_URL + "api/teacher/submissions/$submissionId")
+            .header("Authorization", authString!!)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                callback(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (!response.isSuccessful) {
+                    callback(null)
+                    response.close()
+                    return
+                }
+
+                try {
+                    val buildReport = json.decodeFromString<FullBuildReport>(response.body!!.string())
+                    callback(buildReport)
+                    response.close()
+                } catch (e: Exception) {
+                    callback(null)
+                    response.close()
+                }
+            }
+        })
+    }
 }

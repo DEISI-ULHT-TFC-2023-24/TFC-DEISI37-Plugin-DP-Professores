@@ -60,3 +60,32 @@ data class SubmissionsResponse(
     val projectGroup: ProjectGroup,
     val allSubmissions: List<Submission>
 ) : DPData
+
+@Serializable
+data class FullBuildReport(
+    var numSubmissions: Long? = null,
+    var submission: Submission? = null,
+    var error: String? = null,
+    var summary: List<SubmissionReport>? = null,
+    var structureErrors: List<String>? = null,
+    var buildReport: BuildReport? = null
+) : DPData
+
+@Serializable
+data class SubmissionReport(
+    val reportKey: String,
+    val reportValue: String,
+    val reportProgress: Int? = null,
+    val reportGoal: Int? = null
+)
+
+@Serializable
+data class BuildReport(
+    val compilationErrors: List<String>? = null,
+    val checkstyleErrors: List<String>? = null,
+    val junitSummaryStudent: String? = null,
+    val junitErrorsStudent: String? = null,
+    val junitSummaryTeacher: String? = null,
+    val junitSummaryTeacherExtraDescription: String? = null,
+    val junitErrorsTeacher: String? = null
+)
