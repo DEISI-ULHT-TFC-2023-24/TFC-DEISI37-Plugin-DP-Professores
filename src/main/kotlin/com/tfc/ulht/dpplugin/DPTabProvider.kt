@@ -265,6 +265,24 @@ fun submissionsTabProvider(data: List<DPData>) : DPListTab<SubmissionComponent> 
 
     submissions.forEach {
         root.addItem(SubmissionComponent(it).apply {
+            this.addBuildReportClickListener { _ ->
+                val loadingPanel = JBLoadingPanel(null, Disposable {  })
+                root.add(loadingPanel)
+
+                State.client.getBuildReport(it.id.toString()) { report ->
+                    if (report == null) {
+                        loadingPanel.stopLoading()
+                        root.remove(loadingPanel)
+                    }
+
+                    report?.let { data ->
+                        loadingPanel.stopLoading()
+                        root.remove(loadingPanel)
+                        root.holder.data = listOf(data)
+                        root.navigateForward((root.holder.getTab(data.javaClass.name) as DPTab))
+                    }
+                }
+            }
             this.addSubmissionDownloadClickListener {
                 SubmissionsAction.openSubmission(this.submission.id.toString())
             }

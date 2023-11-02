@@ -272,6 +272,7 @@ class NumberBox(number: Int) : JComponent() {
 class SubmissionComponent(val submission: Submission) : DPComponent() {
     private val idLabel: JLabel
     private val submissionDownloadLabel: JLabel
+    private val buildReportLabel: JLabel
 
     init {
         idLabel = CustomLabel("${submission.id}: ${submission.submissionDate}")
@@ -292,11 +293,34 @@ class SubmissionComponent(val submission: Submission) : DPComponent() {
             this.addComponent(TestResultsComponent(it))
         }
 
+        buildReportLabel = JLabel("Build Report").apply {
+            this.foreground = JBColor.BLUE
 
+            this.font = this.font.deriveFont(this.font.attributes.toMutableMap().apply {
+                this[TextAttribute.UNDERLINE] = TextAttribute.UNDERLINE_ON
+            })
+
+            this.cursor = Cursor(Cursor.HAND_CURSOR)
+        }
+
+        this.addComponentEnd(buildReportLabel)
+        this.addComponentEnd(Box.createRigidArea(Dimension(10, 0)))
         this.addComponentEnd(submissionDownloadLabel)
     }
 
     fun addSubmissionDownloadClickListener(listener: (MouseEvent?) -> Unit) = submissionDownloadLabel.addMouseListener(object : MouseListener {
+        override fun mouseClicked(e: MouseEvent?) = listener(e)
+
+        override fun mousePressed(e: MouseEvent?) {  }
+
+        override fun mouseReleased(e: MouseEvent?) {  }
+
+        override fun mouseEntered(e: MouseEvent?) {  }
+
+        override fun mouseExited(e: MouseEvent?) {  }
+    })
+
+    fun addBuildReportClickListener(listener: (MouseEvent?) -> Unit) = buildReportLabel.addMouseListener(object : MouseListener {
         override fun mouseClicked(e: MouseEvent?) = listener(e)
 
         override fun mousePressed(e: MouseEvent?) {  }
