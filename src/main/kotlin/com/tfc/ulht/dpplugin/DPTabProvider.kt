@@ -41,12 +41,11 @@ open class DPTab : JScrollPane(VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBA
     val backButton: JButton
     val forwardButton: JButton
 
-    val rootPanel = JPanel()
+    val rootPanel = JPanel().apply {
+        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
+    }
 
     init {
-        /*val navigationButtonsPanel = JPanel().apply {
-            this.layout = BoxLayout(this, BoxLayout.X_AXIS)
-        }*/
 
         this.layout = ScrollPaneLayout()
 
@@ -65,9 +64,6 @@ open class DPTab : JScrollPane(VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBA
         }
 
         updateNavButtons()
-
-        // navigationButtonsPanel.add(backButton)
-        // navigationButtonsPanel.add(forwardButton)
 
         rootPanel.add(backButton)
         rootPanel.add(forwardButton)
@@ -116,7 +112,6 @@ open class DPListTab<T : Component>(title: String) : DPTab() {
     }
 
     init {
-        rootPanel.layout = BoxLayout(rootPanel, BoxLayout.Y_AXIS)
         rootPanel.border = JBUI.Borders.empty(0, 20)
 
         rootPanel.add(JLabel("<html><h1>$title</h1></html>").apply { alignmentX = 0.0f })
@@ -142,7 +137,6 @@ private const val ASSIGNMENT_ID = 1
 @Suppress("UNUSED_PARAMETER")
 private fun dashboardTabProvider(data: List<DPData>) : DPTab {
     val panel = DPTab().apply {
-        rootPanel.layout = BoxLayout(rootPanel, BoxLayout.Y_AXIS)
         rootPanel.border = JBUI.Borders.empty(0, 20)
     }
 
@@ -297,8 +291,10 @@ fun submissionsTabProvider(data: List<DPData>) : DPListTab<SubmissionComponent> 
 }
 
 @Suppress("UNCHECKED_CAST")
-fun buildReportTabProvider(data: List<DPData>) : DPListTab<Component> {
-    val root = DPListTab<Component>("Build Report")
+fun buildReportTabProvider(data: List<DPData>) : DPTab {
+    val panel = DPTab().apply {
+        rootPanel.border = JBUI.Borders.empty(0, 20)
+    }
 
     val report = (data as List<FullBuildReport>).first()
 
@@ -306,13 +302,15 @@ fun buildReportTabProvider(data: List<DPData>) : DPListTab<Component> {
         
     })*/
 
-    report.summary?.forEach {
+    /*report.summary?.forEach {
         root.addItem(SubmissionReportComponent(it))
     }
 
-    report.buildReport?.let { root.addItem(BuildReportComponent(it)) }
+    report.buildReport?.let { root.addItem(BuildReportComponent(it)) }*/
 
-    return root
+    panel.rootPanel.add(UIBuildReport().buildComponents(report, null))
+
+    return panel
 }
 
 val tabProviders = mapOf<String, (List<DPData>) -> DPTab>(
