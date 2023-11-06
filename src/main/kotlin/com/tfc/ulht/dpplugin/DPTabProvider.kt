@@ -48,6 +48,8 @@ open class DPTab : JScrollPane(VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBA
             this.layout = BoxLayout(this, BoxLayout.X_AXIS)
         }*/
 
+        this.layout = ScrollPaneLayout()
+
         this.setViewportView(rootPanel)
 
         backButton = JButton(AllIcons.Actions.Back).apply {
@@ -139,10 +141,12 @@ private const val ASSIGNMENT_ID = 1
 
 @Suppress("UNUSED_PARAMETER")
 private fun dashboardTabProvider(data: List<DPData>) : DPTab {
-    val root = DPTab().apply {
-        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        this.border = JBUI.Borders.empty(0, 20)
+    val panel = DPTab().apply {
+        rootPanel.layout = BoxLayout(rootPanel, BoxLayout.Y_AXIS)
+        rootPanel.border = JBUI.Borders.empty(0, 20)
     }
+
+    val root = panel.rootPanel
 
     root.add(JLabel("<html><h1>Dashboard</h1></html>").apply { alignmentX = 0.0f })
 
@@ -151,7 +155,7 @@ private fun dashboardTabProvider(data: List<DPData>) : DPTab {
             LOGIN_ID -> LoginDialog(null).show()
             ASSIGNMENT_ID -> {
                 val loadingPanel = JBLoadingPanel(null, Disposable {  })
-                root.add(loadingPanel)
+                panel.add(loadingPanel)
 
                 loadingPanel.startLoading()
 
@@ -162,14 +166,14 @@ private fun dashboardTabProvider(data: List<DPData>) : DPTab {
                         }
 
                         loadingPanel.stopLoading()
-                        root.remove(loadingPanel)
+                        panel.remove(loadingPanel)
                     }
 
                     assignments?.let { data ->
                         loadingPanel.stopLoading()
-                        root.remove(loadingPanel)
-                        root.holder.data = data
-                        root.navigateForward((root.holder.getTab(data.first().javaClass.name) as DPTab))
+                        panel.remove(loadingPanel)
+                        panel.holder.data = data
+                        panel.navigateForward((panel.holder.getTab(data.first().javaClass.name) as DPTab))
                     }
                 }
             }
@@ -179,7 +183,7 @@ private fun dashboardTabProvider(data: List<DPData>) : DPTab {
     root.add(DashboardItemComponent(LOGIN_ID, "Login", null, listener))
     root.add(DashboardItemComponent(ASSIGNMENT_ID, "Assignments", IconLoader.getIcon("actions/listFiles.svg", AllIcons::class.java), listener))
 
-    return root
+    return panel
 }
 
 @Suppress("UNCHECKED_CAST")
