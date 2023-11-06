@@ -14,8 +14,8 @@ class AssignmentsAction : AnAction() {
         val fileManager = e.project?.let { p -> FileEditorManager.getInstance(p) }
 
         val loadingPanel = JBLoadingPanel(null, Disposable {  })
-        fileManager?.selectedEditor?.component?.add(loadingPanel)
 
+        fileManager?.selectedEditor?.component?.parent?.add(loadingPanel)
         loadingPanel.startLoading()
 
         State.client.getAssignments {
