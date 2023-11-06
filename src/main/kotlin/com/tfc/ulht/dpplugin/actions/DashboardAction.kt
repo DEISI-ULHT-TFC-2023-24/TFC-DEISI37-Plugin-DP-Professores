@@ -1,4 +1,4 @@
-package com.tfc.ulht.dpplugin.Actions
+package com.tfc.ulht.dpplugin.actions
 
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
