@@ -52,8 +52,23 @@ data class Submission(
     val submissionDate: String,
     val status: String,
     val statusDate: String,
-    val testResults: List<TestResult>? = null
+    val testResults: List<TestResult>? = null,
+    val teacherTests: JUnitSummary? = null,
+    val studentTests: JUnitSummary? = null,
+    val hiddenTests: JUnitSummary? = null,
+    val markedAsFinal: Boolean
 ) : DPData
+
+@Serializable
+data class JUnitSummary(
+    val numTests: Int,
+    val numFailures: Int,
+    val numErrors: Int,
+    val numSkipped: Int,
+    val ellapsed: Float,
+    val numMandatoryOK: Int,
+    val numMandatoryNOK: Int
+)
 
 @Serializable
 data class SubmissionsResponse(

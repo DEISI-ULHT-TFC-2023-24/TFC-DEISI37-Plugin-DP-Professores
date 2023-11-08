@@ -108,13 +108,13 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent() {
     })
 }
 
-class TestResultsComponent(results: List<TestResult>) : JLabel() {
+class TestResultsComponent(results: JUnitSummary, description: String) : LabelWithDescription("", description) {
     init {
-        val successCount = results.fold(0) { acc, testResult -> acc + if (testResult.isSuccessful()) 1 else 0 }
-        this.text = "${successCount}/${results.size}"
+        val progress = results.numTests - (results.numErrors + results.numFailures)
+        this.contentLabel.text = progress.toString() + "/" + results.numTests
 
-        (if (successCount >= results.size) JBColor.GREEN else JBColor.RED).run {
-            this@TestResultsComponent.foreground = this
+        (if (progress >= results.numTests) JBColor.GREEN else JBColor.RED).run {
+            this@TestResultsComponent.contentLabel.foreground = this
         }
     }
 }
@@ -139,9 +139,19 @@ class GroupSubmissionsComponent(submissions: SubmissionsResponse) : DPComponent(
         allSubmissions = NumberBox(submissions.allSubmissions.size)
         this.addComponent(allSubmissions)
 
-        submissions.allSubmissions.first().testResults?.let {
+        submissions.allSubmissions.first().teacherTests?.let {
             this.addComponent(Box.createRigidArea(Dimension(10, 0)))
-            this.addComponent(TestResultsComponent(it))
+            this.addComponent(TestResultsComponent(it, "Teacher Tests"))
+        }
+
+        submissions.allSubmissions.first().studentTests?.let {
+            this.addComponent(Box.createRigidArea(Dimension(10, 0)))
+            this.addComponent(TestResultsComponent(it, "Teacher Tests"))
+        }
+
+        submissions.allSubmissions.first().hiddenTests?.let {
+            this.addComponent(Box.createRigidArea(Dimension(10, 0)))
+            this.addComponent(TestResultsComponent(it, "Teacher Tests"))
         }
 
         buildReportLabel = JLabel("Build Report").apply {
@@ -198,16 +208,22 @@ class GroupSubmissionsComponent(submissions: SubmissionsResponse) : DPComponent(
     }
 }
 
-class LabelWithDescription(text: String, description: String) : JComponent() {
+open class LabelWithDescription(text: String, description: String) : JComponent() {
+    protected val descriptionLabel: JLabel
+    protected val contentLabel: JLabel
+
     init {
         this.layout = BoxLayout(this, BoxLayout.X_AXIS)
 
-        this.add(JLabel("$description:").apply {
+        descriptionLabel = JLabel("$description:").apply {
             this.font = JBFont.small().asBold()
             this.alignmentY = 0.4f
-        })
+        }
 
-        this.add(JLabel(text))
+        this.add(descriptionLabel)
+
+        contentLabel = JLabel(text)
+        this.add(contentLabel)
     }
 }
 
@@ -286,9 +302,19 @@ class SubmissionComponent(val submission: Submission) : DPComponent() {
             this.cursor = Cursor(Cursor.HAND_CURSOR)
         }
 
-        submission.testResults?.let {
+        submission.teacherTests?.let {
             this.addComponent(Box.createRigidArea(Dimension(10, 0)))
-            this.addComponent(TestResultsComponent(it))
+            this.addComponent(TestResultsComponent(it, "Teacher Tests"))
+        }
+
+        submission.studentTests?.let {
+            this.addComponent(Box.createRigidArea(Dimension(10, 0)))
+            this.addComponent(TestResultsComponent(it, "Teacher Tests"))
+        }
+
+        submission.hiddenTests?.let {
+            this.addComponent(Box.createRigidArea(Dimension(10, 0)))
+            this.addComponent(TestResultsComponent(it, "Teacher Tests"))
         }
 
         buildReportLabel = JLabel("Build Report").apply {
