@@ -5,6 +5,7 @@ import okhttp3.*
 import java.io.IOException
 import kotlinx.serialization.decodeFromString
 import java.io.InputStream
+import java.util.concurrent.TimeUnit
 
 class DPClient {
     /* private val authenticator = object : Authenticator {
@@ -23,7 +24,11 @@ class DPClient {
     }*/
 
     companion object {
-        private val client = OkHttpClient()
+        private val client = OkHttpClient.Builder()
+            .connectTimeout(5, TimeUnit.SECONDS)
+            .readTimeout(5, TimeUnit.SECONDS)
+            .writeTimeout(5, TimeUnit.SECONDS)
+            .build()
     }
 
     private val json = Json { ignoreUnknownKeys = true }
