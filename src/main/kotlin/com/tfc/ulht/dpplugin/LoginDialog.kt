@@ -25,8 +25,6 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
         init()
         title = "DP - Login"
 
-        loginButton.alignmentX = 1.0F
-
         loginButton.addActionListener {
             Credentials.basic(userField.text, tokenField.text).let { token ->
                 State.client.login(token) { res ->
