@@ -4,21 +4,28 @@ import com.intellij.credentialStore.CredentialAttributes
 import com.intellij.ide.passwordSafe.PasswordSafe
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBTextField
 import okhttp3.Credentials
 import java.awt.Dimension
 import java.awt.event.ComponentEvent
 import java.awt.event.ComponentListener
 import javax.swing.*
 
-class LoginDialog(project: Project?) : DialogWrapper(project) {
-    private val userField = JTextField().apply { this.maximumSize = Dimension(Int.MAX_VALUE, Int.MAX_VALUE) }
-    private val tokenField = JTextField()
+class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeModalityType.PROJECT, false) {
+    private val userField = JBTextField()
+    private val tokenField = JBTextField()
     private val loginButton = JButton("Login")
-    private val resultLabel = JLabel()
+    private val resultLabel = JBLabel()
 
     init {
+        this.isResizable = false
+        this.setSize(250, 150)
+
         init()
         title = "DP - Login"
+
+        loginButton.alignmentX = 1.0F
 
         loginButton.addActionListener {
             Credentials.basic(userField.text, tokenField.text).let { token ->
@@ -36,8 +43,9 @@ class LoginDialog(project: Project?) : DialogWrapper(project) {
     override fun createCenterPanel(): JComponent = JPanel().apply {
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
         this.add(JPanel().apply {
+            this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+
             val label = JLabel("User: ")
-            label.maximumSize = Dimension(this.width / 4, this.height)
             this.add(label)
             this.add(userField)
 
@@ -55,8 +63,17 @@ class LoginDialog(project: Project?) : DialogWrapper(project) {
 
             })
         })
-        this.add(JPanel().apply { this.add(JLabel("Token: ")); this.add(tokenField) })
-        this.add(loginButton)
+        this.add(JPanel().apply {
+            this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+
+            this.add(JLabel("Token: "))
+            this.add(tokenField)
+        })
+        this.add(JPanel().apply {
+            this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+            add(Box.createHorizontalGlue())
+            add(loginButton)
+        })
         this.add(resultLabel)
     }
 }
