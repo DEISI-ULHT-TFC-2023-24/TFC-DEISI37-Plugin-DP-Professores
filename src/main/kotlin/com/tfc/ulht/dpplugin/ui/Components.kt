@@ -1,5 +1,6 @@
 package com.tfc.ulht.dpplugin.ui
 
+import com.intellij.icons.AllIcons
 import com.intellij.ui.JBColor
 import com.intellij.ui.dsl.builder.RowLayout
 import com.intellij.ui.dsl.builder.panel
@@ -289,8 +290,16 @@ class SubmissionComponent(val submission: Submission) : DPComponent() {
     private val buildReportLabel: JLabel
 
     init {
+        val idHolder = JPanel().apply {
+            this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+        }
+
         idLabel = CustomLabel("${submission.id}: ${submission.submissionDate}")
-        this.addComponent(idLabel)
+        idHolder.add(idLabel)
+
+        if (submission.markedAsFinal) idHolder.add(JLabel(AllIcons.Nodes.Function))
+
+        this.addComponent(idHolder)
 
         submissionDownloadLabel = JLabel("Download").apply {
             this.foreground = JBColor.BLUE
