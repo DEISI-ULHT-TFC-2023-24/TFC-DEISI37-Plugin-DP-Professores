@@ -74,6 +74,17 @@ data class SubmissionsResponse(
     val allSubmissions: List<Submission>
 ) : DPData
 
+data class AssignmentSubmissions(
+    val assignmentId: String,
+    val submissionsResponse: List<SubmissionsResponse>
+) : DPData
+
+data class GroupSubmissions(
+    val assignmentId: String,
+    val groupId: Int,
+    val allSubmissions: List<Submission>
+) : DPData
+
 @Serializable
 data class FullBuildReport(
     var numSubmissions: Long? = null,

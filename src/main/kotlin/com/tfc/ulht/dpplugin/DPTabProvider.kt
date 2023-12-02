@@ -20,6 +20,7 @@ import com.tfc.ulht.dpplugin.dplib.*
 import com.tfc.ulht.dpplugin.ui.*
 import java.awt.Component
 import java.awt.Dimension
+import java.awt.Graphics
 import java.beans.PropertyChangeListener
 import javax.swing.*
 
@@ -33,20 +34,25 @@ class DPTabProvider : FileEditorProvider, DumbAware {
     override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.HIDE_DEFAULT_EDITOR
 }
 
-open class DPTab : JScrollPane(VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_NEVER) {
+open class DPTab(addReloadButton: Boolean = false) : JScrollPane(VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_NEVER) {
     lateinit var holder: DPTabHolder
     var parent: DPTab? = null
     var next: DPTab? = null
 
     val backButton: JButton
     val forwardButton: JButton
+    val reloadButton: JButton?
+
+    var reloadFunction: (() -> Unit)? = null
+    var reloadCheckFunction: (() -> Boolean)? = null
+
+    private var hidden = false
 
     val rootPanel = JPanel().apply {
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
     }
 
     init {
-
         this.layout = ScrollPaneLayout()
 
         this.setViewportView(rootPanel)
@@ -67,6 +73,30 @@ open class DPTab : JScrollPane(VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBA
 
         rootPanel.add(backButton)
         rootPanel.add(forwardButton)
+
+        if (addReloadButton) {
+            reloadButton = JButton(AllIcons.Actions.Refresh).apply {
+                this.isEnabled = false
+                this.addActionListener {
+                    reloadFunction?.let { fn -> fn() }
+                }
+            }
+
+            rootPanel.add(reloadButton)
+        } else {
+            reloadButton = null
+        }
+    }
+
+    override fun paintComponent(g: Graphics?) {
+        super.paintComponent(g)
+
+        if (hidden) {
+            hidden = false
+            if (reloadCheckFunction != null) {
+                startRefreshThread()
+            }
+        }
     }
 
     private fun updateNavButtons() {
@@ -102,14 +132,34 @@ open class DPTab : JScrollPane(VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBA
             holder.panel.repaint()
         }
     }
+
+    fun startRefreshThread() =
+        Thread {
+            while (this@DPTab.isShowing) {
+                Thread.sleep(5000)
+
+                if (reloadCheckFunction?.let { it() } == true) {
+                    SwingUtilities.invokeLater {
+                        // last check before enabling the button
+                        if (this@DPTab.isShowing) {
+                            this@DPTab.reloadButton?.isEnabled = true
+                        }
+                    }
+                }
+            }
+
+            this@DPTab.hidden = true
+        }.start()
 }
 
-open class DPListTab<T : Component>(title: String) : DPTab() {
+open class DPListTab<T : Component>(title: String, addReloadButton: Boolean) : DPTab(addReloadButton) {
     private val items: MutableList<T> = mutableListOf()
     private val itemsPanel: JPanel = JPanel().apply {
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
         this.border = JBUI.Borders.empty(0, 10)
     }
+
+    constructor(title:String) : this(title, false)
 
     init {
         rootPanel.border = JBUI.Borders.empty(0, 20)
@@ -128,6 +178,14 @@ open class DPListTab<T : Component>(title: String) : DPTab() {
         items.add(component)
 
         itemsPanel.add(component)
+    }
+
+    fun clear() {
+        items.clear()
+
+        for (i in itemsPanel.components) {
+            itemsPanel.remove(i)
+        }
     }
 }
 
@@ -186,8 +244,8 @@ private fun assignmentTabProvider(data: List<DPData>) : DPListTab<AssignmentComp
 
     val assignments = data as List<Assignment>
 
-    assignments.forEach {
-        root.addItem(AssignmentComponent(it).apply { this.addSubmissionClickListener {
+    assignments.forEach { assignment ->
+        root.addItem(AssignmentComponent(assignment).apply { this.addSubmissionClickListener {
             val loadingPanel = JBLoadingPanel(null, Disposable {  })
             root.add(loadingPanel)
 
@@ -206,8 +264,8 @@ private fun assignmentTabProvider(data: List<DPData>) : DPListTab<AssignmentComp
                 subs?.let { data ->
                     loadingPanel.stopLoading()
                     root.remove(loadingPanel)
-                    root.holder.data = data
-                    root.navigateForward((root.holder.getTab(data.first().javaClass.name) as DPTab))
+                    root.holder.data = listOf(AssignmentSubmissions(assignment.id, data))
+                    root.navigateForward((root.holder.getTab(AssignmentSubmissions::class.java.name) as DPTab))
                 }
             }
         }})
@@ -218,74 +276,141 @@ private fun assignmentTabProvider(data: List<DPData>) : DPListTab<AssignmentComp
 
 @Suppress("UNCHECKED_CAST")
 fun groupSubmissionsTabProvider(data: List<DPData>) : DPListTab<GroupSubmissionsComponent> {
-    val root = DPListTab<GroupSubmissionsComponent>("Submissions")
+    val root = DPListTab<GroupSubmissionsComponent>("Submissions", true)
 
-    val submissions = data as List<SubmissionsResponse>
+    var submissions = (data as List<AssignmentSubmissions>)[0].submissionsResponse
+    var submissionsCache = submissions
 
-    submissions.forEach {
-        root.addItem(GroupSubmissionsComponent(it).apply {
-            this.addBuildReportClickListener { _ ->
-                val loadingPanel = JBLoadingPanel(null, Disposable {  })
-                root.add(loadingPanel)
+    root.reloadCheckFunction = {
+        var ret = false
+        val response = State.client.getSubmissionsBlocking(data[0].assignmentId)
 
-                State.client.getBuildReport(it.allSubmissions.first().id.toString()) { report ->
-                    if (report == null) {
-                        loadingPanel.stopLoading()
-                        root.remove(loadingPanel)
-                    }
+        if (response != null) {
+            if (response != submissions) {
+                ret = true
+                submissionsCache = response
+            }
+        }
 
-                    report?.let { data ->
-                        loadingPanel.stopLoading()
-                        root.remove(loadingPanel)
-                        root.holder.data = listOf(data)
-                        root.navigateForward((root.holder.getTab(data.javaClass.name) as DPTab))
+        ret
+    }
+
+    val populateRoot = {
+        submissions.forEach {
+            root.addItem(GroupSubmissionsComponent(it).apply {
+                this.addBuildReportClickListener { _ ->
+                    val loadingPanel = JBLoadingPanel(null, Disposable {  })
+                    root.add(loadingPanel)
+
+                    State.client.getBuildReport(it.allSubmissions.first().id.toString()) { report ->
+                        if (report == null) {
+                            loadingPanel.stopLoading()
+                            root.remove(loadingPanel)
+                        }
+
+                        report?.let { data ->
+                            loadingPanel.stopLoading()
+                            root.remove(loadingPanel)
+                            root.holder.data = listOf(data)
+                            root.navigateForward((root.holder.getTab(data.javaClass.name) as DPTab))
+                        }
                     }
                 }
-            }
-            this.addSubmissionDownloadClickListener { _ ->
-                SubmissionsAction.openSubmission(it.allSubmissions.first().id.toString())
-            }
-            this.addAllSubmissionsClickListener {
-                root.holder.data = it.allSubmissions
-                root.navigateForward((root.holder.getTab(it.allSubmissions.first().javaClass.name) as DPTab))
-            }
-        })
+                this.addSubmissionDownloadClickListener { _ ->
+                    SubmissionsAction.openSubmission(it.allSubmissions.first().id.toString())
+                }
+                this.addAllSubmissionsClickListener {
+                    root.holder.data = listOf(GroupSubmissions(data[0].assignmentId, it.projectGroup.id, it.allSubmissions))
+                    root.navigateForward((root.holder.getTab(GroupSubmissions::class.java.name) as DPTab))
+                }
+            })
+        }
     }
+
+    root.reloadFunction = {
+        submissions = submissionsCache
+        root.clear()
+        populateRoot()
+
+        root.revalidate()
+        root.repaint()
+
+        root.reloadButton?.isEnabled = false
+    }
+
+    populateRoot()
+
+    root.startRefreshThread()
 
     return root
 }
 
 @Suppress("UNCHECKED_CAST")
 fun submissionsTabProvider(data: List<DPData>) : DPListTab<SubmissionComponent> {
-    val root = DPListTab<SubmissionComponent>("Submissions")
+    val root = DPListTab<SubmissionComponent>("Submissions", true)
 
-    val submissions = data as List<Submission>
+    var submissions = (data as List<GroupSubmissions>)[0].allSubmissions
+    var submissionsCache = submissions
 
-    submissions.forEach {
-        root.addItem(SubmissionComponent(it).apply {
-            this.addBuildReportClickListener { _ ->
-                val loadingPanel = JBLoadingPanel(null, Disposable {  })
-                root.add(loadingPanel)
+    root.reloadCheckFunction = {
+        var ret = false
+        val response = State.client.getSubmissionsBlocking(data[0].assignmentId)
 
-                State.client.getBuildReport(it.id.toString()) { report ->
-                    if (report == null) {
-                        loadingPanel.stopLoading()
-                        root.remove(loadingPanel)
-                    }
-
-                    report?.let { data ->
-                        loadingPanel.stopLoading()
-                        root.remove(loadingPanel)
-                        root.holder.data = listOf(data)
-                        root.navigateForward((root.holder.getTab(data.javaClass.name) as DPTab))
-                    }
+        if (response != null) {
+            for (i in response) {
+                if (i.projectGroup.id == data[0].groupId && i.allSubmissions != submissions) {
+                    ret = true
+                    submissionsCache = i.allSubmissions
+                    break
                 }
             }
-            this.addSubmissionDownloadClickListener {
-                SubmissionsAction.openSubmission(this.submission.id.toString())
-            }
-        })
+        }
+
+        ret
     }
+
+    val populateRoot = {
+        submissions.forEach {
+            root.addItem(SubmissionComponent(it).apply {
+                this.addBuildReportClickListener { _ ->
+                    val loadingPanel = JBLoadingPanel(null, Disposable {  })
+                    root.add(loadingPanel)
+
+                    State.client.getBuildReport(it.id.toString()) { report ->
+                        if (report == null) {
+                            loadingPanel.stopLoading()
+                            root.remove(loadingPanel)
+                        }
+
+                        report?.let { data ->
+                            loadingPanel.stopLoading()
+                            root.remove(loadingPanel)
+                            root.holder.data = listOf(data)
+                            root.navigateForward((root.holder.getTab(data.javaClass.name) as DPTab))
+                        }
+                    }
+                }
+                this.addSubmissionDownloadClickListener {
+                    SubmissionsAction.openSubmission(this.submission.id.toString())
+                }
+            })
+        }
+    }
+
+    root.reloadFunction = {
+        submissions = submissionsCache
+        root.clear()
+        populateRoot()
+
+        root.revalidate()
+        root.repaint()
+
+        root.reloadButton?.isEnabled = false
+    }
+
+    populateRoot()
+
+    root.startRefreshThread()
 
     return root
 }
@@ -316,8 +441,8 @@ fun buildReportTabProvider(data: List<DPData>) : DPTab {
 val tabProviders = mapOf<String, (List<DPData>) -> DPTab>(
     Pair(Null::class.java.name, ::dashboardTabProvider),
     Pair(Assignment::class.java.name, ::assignmentTabProvider),
-    Pair(SubmissionsResponse::class.java.name, ::groupSubmissionsTabProvider),
-    Pair(Submission::class.java.name, ::submissionsTabProvider),
+    Pair(AssignmentSubmissions::class.java.name, ::groupSubmissionsTabProvider),
+    Pair(GroupSubmissions::class.java.name, ::submissionsTabProvider),
     Pair(FullBuildReport::class.java.name, ::buildReportTabProvider)
 )
 
