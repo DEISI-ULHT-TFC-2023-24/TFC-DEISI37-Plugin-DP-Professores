@@ -11,8 +11,10 @@ import java.awt.*
 import java.awt.event.MouseEvent
 import java.awt.event.MouseListener
 import java.awt.font.TextAttribute
+import java.time.format.DateTimeFormatter
 import javax.swing.*
 import javax.swing.Box.Filler
+import javax.xml.datatype.DatatypeFactory
 
 class DashboardItemComponent(id: Int, text: String, icon: Icon?, listener: (Int) -> Unit) : JLabel(text, icon, LEFT) {
     init {
@@ -294,7 +296,10 @@ class SubmissionComponent(val submission: Submission) : DPComponent() {
             this.layout = BoxLayout(this, BoxLayout.X_AXIS)
         }
 
-        idLabel = CustomLabel("${submission.id}: ${submission.submissionDate}")
+        val date = DatatypeFactory.newInstance().newXMLGregorianCalendar(submission.submissionDate)
+            .toGregorianCalendar().toZonedDateTime()
+
+        idLabel = CustomLabel("${submission.id}: ${date.format(DateTimeFormatter.ofPattern("dd/LLL HH:mm"))}")
         idHolder.add(idLabel)
 
         if (submission.markedAsFinal) idHolder.add(JLabel(AllIcons.Nodes.Function))
