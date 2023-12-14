@@ -136,7 +136,7 @@ open class DPTab(addReloadButton: Boolean = false) : JScrollPane(VERTICAL_SCROLL
     fun startRefreshThread() =
         Thread {
             while (this@DPTab.isShowing) {
-                Thread.sleep(5000)
+                Thread.sleep(REFRESH_INTERVAL)
 
                 if (reloadCheckFunction?.let { it() } == true) {
                     SwingUtilities.invokeLater {
