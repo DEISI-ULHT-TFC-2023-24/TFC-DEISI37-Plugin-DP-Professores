@@ -19,9 +19,9 @@ class AssignmentsAction : AnAction() {
         loadingPanel.startLoading()
 
         State.client.getAssignments {
-            it?.let { assignment ->
-                loadingPanel.stopLoading()
+            loadingPanel.stopLoading()
 
+            it?.let { assignment ->
                 val file = VirtualFile(assignment)
 
                 ApplicationManager.getApplication().invokeLater {
