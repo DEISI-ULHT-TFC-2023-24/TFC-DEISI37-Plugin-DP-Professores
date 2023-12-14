@@ -6,6 +6,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
+import com.tfc.ulht.dpplugin.dplib.BASE_URL
 import okhttp3.Credentials
 import java.awt.Dimension
 import java.awt.event.ComponentEvent
@@ -15,6 +16,7 @@ import javax.swing.*
 class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeModalityType.PROJECT, false) {
     private val userField = JBTextField()
     private val tokenField = JBTextField()
+    private val instanceField = JBTextField()
     private val loginButton = JButton("Login")
     private val resultLabel = JBLabel()
 
@@ -27,10 +29,11 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
 
         loginButton.addActionListener {
             Credentials.basic(userField.text, tokenField.text).let { token ->
+                BASE_URL = instanceField.text.ifBlank { BASE_URL }
                 State.client.login(token) { res ->
                     PasswordSafe.instance.set(
                         CredentialAttributes("DP", "dp"),
-                        com.intellij.credentialStore.Credentials(if (res) token else null))
+                        com.intellij.credentialStore.Credentials(if (res) token else null, BASE_URL))
 
                     resultLabel.text = "Login " + if (res) "successful" else "unsuccessful"
                 }
@@ -66,6 +69,12 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
 
             this.add(JLabel("Token: "))
             this.add(tokenField)
+        })
+        this.add(JPanel().apply {
+            this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+
+            this.add(JLabel("Server: "))
+            this.add(instanceField)
         })
         this.add(JPanel().apply {
             this.layout = BoxLayout(this, BoxLayout.X_AXIS)
