@@ -7,6 +7,7 @@ import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.tfc.ulht.dpplugin.dplib.BASE_URL
+import com.tfc.ulht.dpplugin.dplib.addSuffix
 import okhttp3.Credentials
 import java.awt.Dimension
 import java.awt.event.ComponentEvent
@@ -29,7 +30,7 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
 
         loginButton.addActionListener {
             Credentials.basic(userField.text, tokenField.text).let { token ->
-                BASE_URL = instanceField.text.ifBlank { BASE_URL }
+                BASE_URL = instanceField.text.addSuffix("/").ifBlank { BASE_URL }
                 State.client.login(token) { res ->
                     PasswordSafe.instance.set(
                         CredentialAttributes("DP", "dp"),
