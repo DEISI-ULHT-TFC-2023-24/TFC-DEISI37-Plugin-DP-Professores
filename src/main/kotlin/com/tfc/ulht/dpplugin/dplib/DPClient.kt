@@ -3,7 +3,6 @@ package com.tfc.ulht.dpplugin.dplib
 import kotlinx.serialization.json.Json
 import okhttp3.*
 import java.io.IOException
-import kotlinx.serialization.decodeFromString
 import java.io.InputStream
 import java.util.concurrent.TimeUnit
 
@@ -178,6 +177,61 @@ class DPClient {
 
                 try {
                     val submissions = json.decodeFromString<List<SubmissionsResponse>>(response.body!!.string())
+                    callback(submissions)
+                    response.close()
+                } catch (_: Exception) {
+                    callback(null)
+                    response.close()
+                }
+            }
+        })
+    }
+
+    fun getGroupSubmissionsBlocking(assignmentId: String, groupId: Int): List<SubmissionsResponse>? {
+        if (!loggedIn) return null
+
+        val request = Request.Builder()
+            .url(BASE_URL + "api/teacher/assignments/$assignmentId/submissions/$groupId")
+            .header("Authorization", authString!!)
+            .build()
+
+        return client.newCall(request).execute().let { response ->
+            try {
+                val submissions = json.decodeFromString<List<SubmissionsResponse>>(response.body!!.string())
+                response.close()
+                submissions
+            } catch (_: Exception) {
+                response.close()
+                null
+            }
+        }
+    }
+
+    fun getGroupSubmissions(assignmentId: String, groupId: Int, callback: ((List<Submission>?) -> Unit)) {
+        if (!loggedIn) {
+            callback(null)
+            return
+        }
+
+        val request = Request.Builder()
+            .url(BASE_URL + "api/teacher/assignments/$assignmentId/submissions/$groupId")
+            .header("Authorization", authString!!)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                callback(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (!response.isSuccessful) {
+                    callback(null)
+                    response.close()
+                    return
+                }
+
+                try {
+                    val submissions = json.decodeFromString<List<Submission>>(response.body!!.string())
                     callback(submissions)
                     response.close()
                 } catch (_: Exception) {

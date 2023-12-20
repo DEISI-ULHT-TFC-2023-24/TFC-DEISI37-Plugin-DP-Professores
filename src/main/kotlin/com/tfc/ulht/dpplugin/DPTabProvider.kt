@@ -303,14 +303,10 @@ fun groupSubmissionsTabProvider(data: List<DPData>) : DPListTab<GroupSubmissions
                     root.add(loadingPanel)
 
                     State.client.getBuildReport(it.allSubmissions.first().id.toString()) { report ->
-                        if (report == null) {
-                            loadingPanel.stopLoading()
-                            root.remove(loadingPanel)
-                        }
+                        loadingPanel.stopLoading()
+                        root.remove(loadingPanel)
 
                         report?.let { data ->
-                            loadingPanel.stopLoading()
-                            root.remove(loadingPanel)
                             root.holder.data = listOf(data)
                             root.navigateForward((root.holder.getTab(data.javaClass.name) as DPTab))
                         }
@@ -320,8 +316,18 @@ fun groupSubmissionsTabProvider(data: List<DPData>) : DPListTab<GroupSubmissions
                     SubmissionsAction.openSubmission(it.allSubmissions.first().id.toString())
                 }
                 this.addAllSubmissionsClickListener {
-                    root.holder.data = listOf(GroupSubmissions(data[0].assignmentId, it.projectGroup.id, it.allSubmissions))
-                    root.navigateForward((root.holder.getTab(GroupSubmissions::class.java.name) as DPTab))
+                    val loadingPanel = JBLoadingPanel(null, Disposable {  })
+                    root.add(loadingPanel)
+
+                    State.client.getGroupSubmissions(data[0].assignmentId, it.projectGroup.id) { subs ->
+                        loadingPanel.stopLoading()
+                        root.remove(loadingPanel)
+
+                        subs?.let { s ->
+                            root.holder.data = listOf(GroupSubmissions(data[0].assignmentId, it.projectGroup.id, s))
+                            root.navigateForward((root.holder.getTab(GroupSubmissions::class.java.name) as DPTab))
+                        }
+                    }
                 }
             })
         }
