@@ -69,6 +69,34 @@ open class DPComponent : JComponent() {
     protected fun addComponentEnd(component: Component) = add(component, -1)
 }
 
+class StudentComponent(private val student: StudentListResponse) : DPComponent() {
+    private val nameLabel: JLabel
+    private val idLabel: JLabel
+
+    init {
+        nameLabel = CustomLabel(student.text + ": ")
+        this.addComponent(nameLabel)
+
+        idLabel = JLabel(student.value)
+        this.addComponent(idLabel)
+    }
+
+    fun addOnClickListener(callback: (StudentListResponse) -> Unit) {
+        this.addMouseListener(object : MouseListener {
+            override fun mouseClicked(e: MouseEvent?) = callback(student)
+
+            override fun mousePressed(e: MouseEvent?) {  }
+
+            override fun mouseReleased(e: MouseEvent?) {  }
+
+            override fun mouseEntered(e: MouseEvent?) {  }
+
+            override fun mouseExited(e: MouseEvent?) {  }
+
+        })
+    }
+}
+
 class AssignmentComponent(val assignment: Assignment) : DPComponent() {
     val idLabel: JLabel
     val submissionsLabel: JLabel
@@ -133,26 +161,26 @@ class GroupSubmissionsComponent(submissions: SubmissionsResponse) : DPComponent(
         this.addComponent(idLabel)
 
         this.addComponent(Box.createRigidArea(Dimension(10, 0)))
-        this.addComponent(LabelWithDescription(submissions.allSubmissions.first().submissionDate, "last submission"))
+        this.addComponent(LabelWithDescription(submissions.lastSubmission.submissionDate, "last submission"))
 
         this.addComponent(Box.createRigidArea(Dimension(10, 0)))
-        this.addComponent(LabelWithDescription(submissions.allSubmissions.first().status, "last status"))
+        this.addComponent(LabelWithDescription(submissions.lastSubmission.status, "last status"))
 
         this.addComponent(Box.createRigidArea(Dimension(10, 0)))
         allSubmissions = NumberBox(submissions.allSubmissions.size)
         this.addComponent(allSubmissions)
 
-        submissions.allSubmissions.first().teacherTests?.let {
+        submissions.lastSubmission.teacherTests?.let {
             this.addComponent(Box.createRigidArea(Dimension(10, 0)))
             this.addComponent(TestResultsComponent(it, "Teacher Tests"))
         }
 
-        submissions.allSubmissions.first().studentTests?.let {
+        submissions.lastSubmission.studentTests?.let {
             this.addComponent(Box.createRigidArea(Dimension(10, 0)))
             this.addComponent(TestResultsComponent(it, "Teacher Tests"))
         }
 
-        submissions.allSubmissions.first().hiddenTests?.let {
+        submissions.lastSubmission.hiddenTests?.let {
             this.addComponent(Box.createRigidArea(Dimension(10, 0)))
             this.addComponent(TestResultsComponent(it, "Teacher Tests"))
         }

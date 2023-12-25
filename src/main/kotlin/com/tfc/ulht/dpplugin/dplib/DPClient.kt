@@ -315,4 +315,74 @@ class DPClient {
             }
         })
     }
+
+    fun getStudentHistory(studentId: String, callback: ((StudentHistory?) -> Unit)) {
+        if (!loggedIn) {
+            callback(null)
+            return
+        }
+
+        val request = Request.Builder()
+            .url(BASE_URL + "api/teacher/studentHistory/$studentId")
+            .header("Authorization", authString!!)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                callback(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (!response.isSuccessful) {
+                    callback(null)
+                    response.close()
+                    return
+                }
+
+                try {
+                    val studentHistory = json.decodeFromString<StudentHistory>(response.body!!.string())
+                    callback(studentHistory)
+                    response.close()
+                } catch (e: Exception) {
+                    callback(null)
+                    response.close()
+                }
+            }
+        })
+    }
+
+    fun searchStudents(query: String, callback: ((List<StudentListResponse>?) -> Unit)) {
+        if (!loggedIn) {
+            callback(null)
+            return
+        }
+
+        val request = Request.Builder()
+            .url(BASE_URL + "api/teacher/studentSearch/$query")
+            .header("Authorization", authString!!)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                callback(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (!response.isSuccessful) {
+                    callback(null)
+                    response.close()
+                    return
+                }
+
+                try {
+                    val studentHistory = json.decodeFromString<List<StudentListResponse>>(response.body!!.string())
+                    callback(studentHistory)
+                    response.close()
+                } catch (e: Exception) {
+                    callback(null)
+                    response.close()
+                }
+            }
+        })
+    }
 }

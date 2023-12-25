@@ -54,7 +54,8 @@ data class Submission(
     val teacherTests: JUnitSummary? = null,
     val studentTests: JUnitSummary? = null,
     val hiddenTests: JUnitSummary? = null,
-    val markedAsFinal: Boolean
+    val markedAsFinal: Boolean,
+    val group: ProjectGroup? = null
 ) : DPData
 
 @Serializable
@@ -71,6 +72,7 @@ data class JUnitSummary(
 @Serializable
 data class SubmissionsResponse(
     val projectGroup: ProjectGroup,
+    val lastSubmission: Submission,
     val allSubmissions: List<Submission>
 ) : DPData
 
@@ -113,3 +115,17 @@ data class BuildReport(
     val junitSummaryTeacherExtraDescription: String? = null,
     val junitErrorsTeacher: String? = null
 )
+
+@Serializable
+data class StudentHistory(
+    val history: List<StudentHistoryEntry>
+)
+
+@Serializable
+data class StudentHistoryEntry(
+    val assignment: Assignment,
+    val sortedSubmissions: List<Submission>
+) : DPData
+
+@Serializable
+data class StudentListResponse(val value: String, val text: String)

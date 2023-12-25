@@ -8,13 +8,14 @@ import com.intellij.openapi.fileEditor.FileEditorProvider
 import com.intellij.openapi.fileEditor.FileEditorState
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.components.JBLoadingPanel
+import com.intellij.ui.util.maximumHeight
+import com.intellij.ui.util.preferredHeight
 import com.intellij.util.ui.JBUI
 import com.tfc.ulht.dpplugin.dplib.*
 import com.tfc.ulht.dpplugin.ui.*
@@ -36,11 +37,11 @@ class DPTabProvider : FileEditorProvider, DumbAware {
 
 open class DPTab(addReloadButton: Boolean = false) : JScrollPane(VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_NEVER) {
     lateinit var holder: DPTabHolder
-    var parent: DPTab? = null
+    private var parent: DPTab? = null
     var next: DPTab? = null
 
-    val backButton: JButton
-    val forwardButton: JButton
+    private val backButton: JButton
+    private val forwardButton: JButton
     val reloadButton: JButton?
 
     var reloadFunction: (() -> Unit)? = null
@@ -154,7 +155,7 @@ open class DPTab(addReloadButton: Boolean = false) : JScrollPane(VERTICAL_SCROLL
 
 open class DPListTab<T : Component>(title: String, addReloadButton: Boolean) : DPTab(addReloadButton) {
     private val items: MutableList<T> = mutableListOf()
-    private val itemsPanel: JPanel = JPanel().apply {
+    val itemsPanel: JPanel = JPanel().apply {
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
         this.border = JBUI.Borders.empty(0, 10)
     }
@@ -189,53 +190,112 @@ open class DPListTab<T : Component>(title: String, addReloadButton: Boolean) : D
     }
 }
 
-private const val LOGIN_ID = 0
-private const val ASSIGNMENT_ID = 1
-
 @Suppress("UNUSED_PARAMETER")
 private fun dashboardTabProvider(data: List<DPData>) : DPTab {
     val panel = DPTab().apply {
-        rootPanel.border = JBUI.Borders.empty(0, 20)
+        this.rootPanel.border = JBUI.Borders.empty(0, 20)
     }
 
     val root = panel.rootPanel
 
     root.add(JLabel("<html><h1>Dashboard</h1></html>").apply { alignmentX = 0.0f })
 
-    val listener: (Int) -> Unit = {
-        when (it) {
-            LOGIN_ID -> LoginDialog(null).show()
-            ASSIGNMENT_ID -> {
-                val loadingPanel = JBLoadingPanel(null, Disposable {  })
-                panel.add(loadingPanel)
+    val content = JPanel().apply {
+        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        this.border = JBUI.Borders.empty(0, 10)
+    }
 
-                loadingPanel.startLoading()
+    root.add(content)
 
-                State.client.getAssignments { assignments ->
-                    if (assignments == null) {
-                        JDialog(WindowManager.getInstance().findVisibleFrame(), "Couldn't load assignments.").run {
-                            this.isVisible = true
-                        }
+    val studentHistoryContainer = JPanel().apply {
+        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        this.border = JBUI.Borders.empty(0, 50)
+    }
 
-                        loadingPanel.stopLoading()
-                        panel.remove(loadingPanel)
+    content.add(studentHistoryContainer)
+
+    studentHistoryContainer.add(JLabel("<html><h2>Student History</h2></html>"))
+
+    val studentSearchField = JTextField().apply {
+        this.addActionListener {
+            State.client.searchStudents(this.text) {
+                SwingUtilities.invokeLater {
+                    while (studentHistoryContainer.componentCount > 2) {
+                        studentHistoryContainer.remove(2)
                     }
 
-                    assignments?.let { data ->
-                        loadingPanel.stopLoading()
-                        panel.remove(loadingPanel)
-                        panel.holder.data = data
-                        panel.navigateForward((panel.holder.getTab(data.first().javaClass.name) as DPTab))
+                    studentHistoryContainer.revalidate()
+                    studentHistoryContainer.repaint()
+
+                    it?.let {
+                        for (student in it) {
+                            studentHistoryContainer.add(StudentComponent(student).apply {
+                                this.addOnClickListener {  r ->
+                                    State.client.getStudentHistory(r.value) { sh ->
+                                        sh?.let {
+                                            panel.holder.data = sh.history
+                                            panel.navigateForward(panel.holder.getTab(StudentHistoryEntry::class.java.name) as DPTab)
+                                        }
+                                    }
+                                }
+                            })
+
+                            studentHistoryContainer.revalidate()
+                            studentHistoryContainer.repaint()
+                        }
                     }
                 }
             }
         }
+
+        this.maximumHeight = this.preferredHeight
+        this.alignmentX = 0F
     }
 
-    root.add(DashboardItemComponent(LOGIN_ID, "Login", null, listener))
-    root.add(DashboardItemComponent(ASSIGNMENT_ID, "Assignments", IconLoader.getIcon("actions/listFiles.svg", AllIcons::class.java), listener))
+    studentHistoryContainer.add(studentSearchField)
+
+    content.add(JSeparator(JSeparator.HORIZONTAL))
 
     return panel
+}
+
+@Suppress("UNCHECKED_CAST")
+private fun studentHistoryTabProvider(data: List<DPData>) : DPListTab<SubmissionComponent> {
+    val root = DPListTab<SubmissionComponent>("Student History")
+
+    val studentHistory = data as List<StudentHistoryEntry>
+
+    studentHistory.forEach { entry ->
+        root.itemsPanel.add(JLabel("<html><h2>${entry.assignment.name}: ${entry.sortedSubmissions[0].group?.authors?.joinToString { it.name }}</h2></html>"))
+
+        for (s in entry.sortedSubmissions) {
+            root.addItem(SubmissionComponent(s).apply {
+                this.addBuildReportClickListener { _ ->
+                    val loadingPanel = JBLoadingPanel(null, Disposable {  })
+                    root.add(loadingPanel)
+
+                    State.client.getBuildReport(s.id.toString()) { report ->
+                        if (report == null) {
+                            loadingPanel.stopLoading()
+                            root.remove(loadingPanel)
+                        }
+
+                        report?.let { data ->
+                            loadingPanel.stopLoading()
+                            root.remove(loadingPanel)
+                            root.holder.data = listOf(data)
+                            root.navigateForward((root.holder.getTab(data.javaClass.name) as DPTab))
+                        }
+                    }
+                }
+                this.addSubmissionDownloadClickListener {
+                    SubmissionsAction.openSubmission(this.submission.id.toString())
+                }
+            })
+        }
+    }
+
+    return root
 }
 
 @Suppress("UNCHECKED_CAST")
@@ -360,7 +420,7 @@ fun submissionsTabProvider(data: List<DPData>) : DPListTab<SubmissionComponent> 
 
     root.reloadCheckFunction = {
         var ret = false
-        val response = State.client.getSubmissionsBlocking(data[0].assignmentId)
+        val response = State.client.getGroupSubmissionsBlocking(data[0].assignmentId, data[0].groupId)
 
         if (response != null) {
             for (i in response) {
@@ -446,6 +506,7 @@ fun buildReportTabProvider(data: List<DPData>) : DPTab {
 
 val tabProviders = mapOf<String, (List<DPData>) -> DPTab>(
     Pair(Null::class.java.name, ::dashboardTabProvider),
+    Pair(StudentHistoryEntry::class.java.name, ::studentHistoryTabProvider),
     Pair(Assignment::class.java.name, ::assignmentTabProvider),
     Pair(AssignmentSubmissions::class.java.name, ::groupSubmissionsTabProvider),
     Pair(GroupSubmissions::class.java.name, ::submissionsTabProvider),
