@@ -385,4 +385,38 @@ class DPClient {
             }
         })
     }
+
+    fun markAsFinal(submissionId: String, callback: ((Boolean?) -> Unit)) {
+        if (!loggedIn) {
+            callback(null)
+            return
+        }
+
+        val request = Request.Builder()
+            .url(BASE_URL + "api/teacher/submissions/$submissionId/markAsFinal")
+            .header("Authorization", authString!!)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                callback(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (!response.isSuccessful) {
+                    callback(null)
+                    response.close()
+                    return
+                }
+
+                try {
+                    callback(response.body!!.string() == "true")
+                    response.close()
+                } catch (_: Exception) {
+                    callback(null)
+                    response.close()
+                }
+            }
+        })
+    }
 }

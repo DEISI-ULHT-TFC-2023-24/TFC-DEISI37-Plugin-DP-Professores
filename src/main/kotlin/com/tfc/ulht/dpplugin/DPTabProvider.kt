@@ -291,6 +291,16 @@ private fun studentHistoryTabProvider(data: List<DPData>) : DPListTab<Submission
                 this.addSubmissionDownloadClickListener {
                     SubmissionsAction.openSubmission(this.submission.id.toString())
                 }
+                this.addMarkAsFinalClickListener {
+                    State.client.markAsFinal(this.submission.id.toString()) { result ->
+                        if (result == true) {
+                            this.markedAsFinal()
+
+                            this.revalidate()
+                            this.repaint()
+                        }
+                    }
+                }
             })
         }
     }
@@ -458,6 +468,16 @@ fun submissionsTabProvider(data: List<DPData>) : DPListTab<SubmissionComponent> 
                 }
                 this.addSubmissionDownloadClickListener {
                     SubmissionsAction.openSubmission(this.submission.id.toString())
+                }
+                this.addMarkAsFinalClickListener {
+                    State.client.markAsFinal(this.submission.id.toString()) { result ->
+                        if (result == true) {
+                            this.markedAsFinal()
+
+                            this.revalidate()
+                            this.repaint()
+                        }
+                    }
                 }
             })
         }

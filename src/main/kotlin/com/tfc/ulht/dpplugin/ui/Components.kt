@@ -314,15 +314,17 @@ class NumberBox(number: Int) : JComponent() {
     }
 }
 
-class SubmissionComponent(val submission: Submission) : DPComponent() {
+class SubmissionComponent(var submission: Submission) : DPComponent() {
+    private val idHolder: JPanel = JPanel().apply {
+        this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+    }
+
     private val idLabel: JLabel
     private val submissionDownloadLabel: JLabel
+    private val markAsFinalLabel: JLabel
     private val buildReportLabel: JLabel
 
     init {
-        val idHolder = JPanel().apply {
-            this.layout = BoxLayout(this, BoxLayout.X_AXIS)
-        }
 
         val date = DatatypeFactory.newInstance().newXMLGregorianCalendar(submission.submissionDate)
             .toGregorianCalendar().toZonedDateTime()
@@ -342,6 +344,17 @@ class SubmissionComponent(val submission: Submission) : DPComponent() {
             this.font = this.font.deriveFont(style)
 
             this.cursor = Cursor(Cursor.HAND_CURSOR)
+        }
+
+        markAsFinalLabel = JLabel("Mark as Final").apply {
+            this.foreground = if (!submission.markedAsFinal) JBColor.BLUE else JBColor.DARK_GRAY
+
+            val style = this.font.attributes.toMutableMap()
+            style[TextAttribute.UNDERLINE] = TextAttribute.UNDERLINE_ON
+            this.font = this.font.deriveFont(style)
+
+            @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
+            this.cursor = if (!submission.markedAsFinal) Cursor(Cursor.HAND_CURSOR) else null
         }
 
         submission.teacherTests?.let {
@@ -371,11 +384,29 @@ class SubmissionComponent(val submission: Submission) : DPComponent() {
 
         this.addComponentEnd(buildReportLabel)
         this.addComponentEnd(Box.createRigidArea(Dimension(10, 0)))
+        this.addComponentEnd(markAsFinalLabel)
+        this.addComponentEnd(Box.createRigidArea(Dimension(10, 0)))
         this.addComponentEnd(submissionDownloadLabel)
     }
 
     fun addSubmissionDownloadClickListener(listener: (MouseEvent?) -> Unit) = submissionDownloadLabel.addMouseListener(object : MouseListener {
         override fun mouseClicked(e: MouseEvent?) = listener(e)
+
+        override fun mousePressed(e: MouseEvent?) {  }
+
+        override fun mouseReleased(e: MouseEvent?) {  }
+
+        override fun mouseEntered(e: MouseEvent?) {  }
+
+        override fun mouseExited(e: MouseEvent?) {  }
+    })
+
+    fun addMarkAsFinalClickListener(listener: (MouseEvent?) -> Unit) = markAsFinalLabel.addMouseListener(object : MouseListener {
+        override fun mouseClicked(e: MouseEvent?) {
+            if (!submission.markedAsFinal) {
+                listener(e)
+            }
+        }
 
         override fun mousePressed(e: MouseEvent?) {  }
 
@@ -397,6 +428,30 @@ class SubmissionComponent(val submission: Submission) : DPComponent() {
 
         override fun mouseExited(e: MouseEvent?) {  }
     })
+
+    fun markedAsFinal() {
+        this.idHolder.add(JLabel(AllIcons.Nodes.Function))
+
+        this.submission = Submission(
+            submission.id,
+            submission.statusDate,
+            submission.status,
+            submission.statusDate,
+            submission.testResults,
+            submission.teacherTests,
+            submission.studentTests,
+            submission.hiddenTests,
+            true,
+            submission.group
+        )
+
+        this.markAsFinalLabel.apply {
+            this.foreground = JBColor.DARK_GRAY
+
+            @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
+            this.cursor = null
+        }
+    }
 }
 
 class SubmissionReportComponent(report: SubmissionReport) : DPComponent() {
