@@ -212,7 +212,13 @@ private fun dashboardTabProvider(data: List<DPData>) : DPTab {
         this.border = JBUI.Borders.empty(0, 50)
     }
 
+    val assignmentSearchContainer = JPanel().apply {
+        this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        this.border = JBUI.Borders.empty(0, 50)
+    }
+
     content.add(studentHistoryContainer)
+    content.add(assignmentSearchContainer)
 
     studentHistoryContainer.add(JLabel("<html><h2>Student History</h2></html>"))
 
@@ -230,7 +236,7 @@ private fun dashboardTabProvider(data: List<DPData>) : DPTab {
                     it?.let {
                         for (student in it) {
                             studentHistoryContainer.add(StudentComponent(student).apply {
-                                this.addOnClickListener {  r ->
+                                this.addOnClickListener { r ->
                                     State.client.getStudentHistory(r.value) { sh ->
                                         sh?.let {
                                             panel.holder.data = sh.history
@@ -252,7 +258,44 @@ private fun dashboardTabProvider(data: List<DPData>) : DPTab {
         this.alignmentX = 0F
     }
 
+    val assignmentSearchField = JTextField().apply {
+        this.addActionListener {
+            State.client.searchAssignments(this.text) {
+                SwingUtilities.invokeLater {
+                    while (assignmentSearchContainer.componentCount > 1) {
+                        assignmentSearchContainer.remove(1)
+                    }
+
+                    assignmentSearchContainer.revalidate()
+                    assignmentSearchContainer.repaint()
+
+                    it?.let {
+                        for (student in it) {
+                            assignmentSearchContainer.add(StudentComponent(student).apply {
+                                this.addOnClickListener { r ->
+                                    State.client.getSubmissions(r.value) { subs ->
+                                        subs?.let {
+                                            panel.holder.data = listOf(AssignmentSubmissions(r.value, subs))
+                                            panel.navigateForward(panel.holder.getTab(AssignmentSubmissions::class.java.name) as DPTab)
+                                        }
+                                    }
+                                }
+                            })
+
+                            assignmentSearchContainer.revalidate()
+                            assignmentSearchContainer.repaint()
+                        }
+                    }
+                }
+            }
+        }
+
+        this.maximumHeight = this.preferredHeight
+        this.alignmentX = 0F
+    }
+
     studentHistoryContainer.add(studentSearchField)
+    assignmentSearchContainer.add(assignmentSearchField)
 
     content.add(JSeparator(JSeparator.HORIZONTAL))
 
