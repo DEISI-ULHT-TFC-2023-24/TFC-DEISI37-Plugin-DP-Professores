@@ -69,6 +69,10 @@ open class DPComponent : JComponent() {
     protected fun addComponentEnd(component: Component) = add(component, -1)
 }
 
+interface SearchableComponent {
+    fun match(queries: List<String>): Boolean
+}
+
 class StudentComponent(private val student: StudentListResponse) : DPComponent() {
     private val nameLabel: JLabel
     private val idLabel: JLabel
@@ -97,7 +101,7 @@ class StudentComponent(private val student: StudentListResponse) : DPComponent()
     }
 }
 
-class AssignmentComponent(val assignment: Assignment) : DPComponent() {
+class AssignmentComponent(val assignment: Assignment) : DPComponent(), SearchableComponent {
     val idLabel: JLabel
     val submissionsLabel: JLabel
 
@@ -137,6 +141,18 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent() {
 
         override fun mouseExited(e: MouseEvent?) {  }
     })
+
+    override fun match(queries: List<String>): Boolean {
+        if (queries.isEmpty()) return false
+
+        for (query in queries) {
+            if (!assignment.id.contains(query) && !assignment.name.contains(query)) {
+                return false
+            }
+        }
+
+        return true
+    }
 }
 
 class TestResultsComponent(results: JUnitSummary, description: String) : LabelWithDescription("", description) {

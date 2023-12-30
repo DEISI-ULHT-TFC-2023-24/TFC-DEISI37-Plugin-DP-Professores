@@ -153,7 +153,8 @@ open class DPTab(addReloadButton: Boolean = false) : JScrollPane(VERTICAL_SCROLL
         }.start()
 }
 
-open class DPListTab<T : Component>(title: String, addReloadButton: Boolean) : DPTab(addReloadButton) {
+open class DPListTab<T : Component>(title: String, addReloadButton: Boolean, addSearchBar: Boolean = false) : DPTab(addReloadButton) {
+    private val allItems: MutableList<T> = mutableListOf()
     private val items: MutableList<T> = mutableListOf()
     val itemsPanel: JPanel = JPanel().apply {
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
@@ -166,6 +167,29 @@ open class DPListTab<T : Component>(title: String, addReloadButton: Boolean) : D
         rootPanel.border = JBUI.Borders.empty(0, 20)
 
         rootPanel.add(JLabel("<html><h1>$title</h1></html>").apply { alignmentX = 0.0f })
+
+        if (addSearchBar) {
+            rootPanel.add(JTextField().apply {
+                this.addActionListener {
+                    if (allItems.isNotEmpty() && SearchableComponent::class.java in items.first()::class.java.interfaces) {
+                        this@DPListTab.clear()
+
+                        for (item in allItems) {
+                            if (this.text.isBlank() || (item as SearchableComponent).match(listOf(this.text))) {
+                                this@DPListTab.addItem(item)
+                            }
+                        }
+
+                        this@DPListTab.itemsPanel.revalidate()
+                        this@DPListTab.itemsPanel.repaint()
+                    }
+                }
+
+                this.alignmentX = 0F
+                this.maximumHeight = this.preferredHeight
+            })
+        }
+
         rootPanel.add(itemsPanel)
     }
 
@@ -175,6 +199,9 @@ open class DPListTab<T : Component>(title: String, addReloadButton: Boolean) : D
                 maximumSize = Dimension(maximumSize.width, 2)
             })
         }
+
+        if (component !in allItems)
+            allItems.add(component)
 
         items.add(component)
 
@@ -353,7 +380,7 @@ private fun studentHistoryTabProvider(data: List<DPData>) : DPListTab<Submission
 
 @Suppress("UNCHECKED_CAST")
 private fun assignmentTabProvider(data: List<DPData>) : DPListTab<AssignmentComponent> {
-    val root = DPListTab<AssignmentComponent>("Assignments")
+    val root = DPListTab<AssignmentComponent>("Assignments", false, true)
 
     val assignments = data as List<Assignment>
 
