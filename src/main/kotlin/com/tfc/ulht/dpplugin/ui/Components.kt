@@ -146,7 +146,7 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent(), Searchabl
         if (queries.isEmpty()) return false
 
         for (query in queries) {
-            if (!assignment.id.contains(query) && !assignment.name.contains(query)) {
+            if (!assignment.id.lowercase().contains(query.lowercase()) && !assignment.name.lowercase().contains(query.lowercase())) {
                 return false
             }
         }
