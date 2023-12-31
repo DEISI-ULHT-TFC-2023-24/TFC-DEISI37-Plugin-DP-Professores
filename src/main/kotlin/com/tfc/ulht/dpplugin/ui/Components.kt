@@ -166,7 +166,7 @@ class TestResultsComponent(results: JUnitSummary, description: String) : LabelWi
     }
 }
 
-class GroupSubmissionsComponent(submissions: SubmissionsResponse) : DPComponent() {
+class GroupSubmissionsComponent(private val submissions: SubmissionsResponse) : DPComponent(), SearchableComponent {
     private val idLabel: JLabel
     private val allSubmissions: NumberBox
     private val submissionDownloadLabel: JLabel
@@ -253,6 +253,18 @@ class GroupSubmissionsComponent(submissions: SubmissionsResponse) : DPComponent(
     fun addAllSubmissionsClickListener(listener: () -> Unit) {
         allSubmissions.clickListener = listener
     }
+
+    override fun match(queries: List<String>): Boolean {
+        if (queries.isEmpty()) return false
+
+        for (query in queries) {
+            if (submissions.projectGroup.authors.none { it.name.lowercase().contains(query.lowercase()) || it.id.toString().contains(query) }) {
+                return false
+            }
+        }
+
+        return true
+    }
 }
 
 open class LabelWithDescription(text: String, description: String) : JComponent() {
@@ -330,7 +342,7 @@ class NumberBox(number: Int) : JComponent() {
     }
 }
 
-class SubmissionComponent(var submission: Submission) : DPComponent() {
+class SubmissionComponent(var submission: Submission) : DPComponent(), SearchableComponent {
     private val idHolder: JPanel = JPanel().apply {
         this.layout = BoxLayout(this, BoxLayout.X_AXIS)
     }
@@ -467,6 +479,18 @@ class SubmissionComponent(var submission: Submission) : DPComponent() {
             @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
             this.cursor = null
         }
+    }
+
+    override fun match(queries: List<String>): Boolean {
+        if (queries.isEmpty()) return false
+
+        for (query in queries) {
+            if (!submission.id.toString().lowercase().contains(query.lowercase())) {
+                return false
+            }
+        }
+
+        return true
     }
 }
 

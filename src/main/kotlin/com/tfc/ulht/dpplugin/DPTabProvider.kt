@@ -380,7 +380,7 @@ private fun studentHistoryTabProvider(data: List<DPData>) : DPListTab<Submission
 
 @Suppress("UNCHECKED_CAST")
 private fun assignmentTabProvider(data: List<DPData>) : DPListTab<AssignmentComponent> {
-    val root = DPListTab<AssignmentComponent>("Assignments", false, true)
+    val root = DPListTab<AssignmentComponent>("Assignments", addReloadButton = false, addSearchBar = true)
 
     val assignments = data as List<Assignment>
 
@@ -416,7 +416,7 @@ private fun assignmentTabProvider(data: List<DPData>) : DPListTab<AssignmentComp
 
 @Suppress("UNCHECKED_CAST")
 fun groupSubmissionsTabProvider(data: List<DPData>) : DPListTab<GroupSubmissionsComponent> {
-    val root = DPListTab<GroupSubmissionsComponent>("Submissions", true)
+    val root = DPListTab<GroupSubmissionsComponent>("Submissions", addReloadButton = true, addSearchBar = true)
 
     var submissions = (data as List<AssignmentSubmissions>)[0].submissionsResponse
     var submissionsCache = submissions
@@ -493,7 +493,7 @@ fun groupSubmissionsTabProvider(data: List<DPData>) : DPListTab<GroupSubmissions
 
 @Suppress("UNCHECKED_CAST")
 fun submissionsTabProvider(data: List<DPData>) : DPListTab<SubmissionComponent> {
-    val root = DPListTab<SubmissionComponent>("Submissions", true)
+    val root = DPListTab<SubmissionComponent>("Submissions", addReloadButton = true, addSearchBar = true)
 
     var submissions = (data as List<GroupSubmissions>)[0].allSubmissions
     var submissionsCache = submissions
