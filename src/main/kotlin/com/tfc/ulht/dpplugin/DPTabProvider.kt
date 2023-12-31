@@ -16,6 +16,7 @@ import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.components.JBLoadingPanel
 import com.intellij.ui.util.maximumHeight
 import com.intellij.ui.util.preferredHeight
+import com.intellij.ui.util.preferredWidth
 import com.intellij.util.ui.JBUI
 import com.tfc.ulht.dpplugin.dplib.*
 import com.tfc.ulht.dpplugin.ui.*
@@ -236,18 +237,27 @@ private fun dashboardTabProvider(data: List<DPData>) : DPTab {
 
     val studentHistoryContainer = JPanel().apply {
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        this.border = JBUI.Borders.empty(0, 50)
+        this.border = JBUI.Borders.empty(0, 250)
     }
 
     val assignmentSearchContainer = JPanel().apply {
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
-        this.border = JBUI.Borders.empty(0, 50)
+        this.border = JBUI.Borders.empty(0, 250)
+    }
+
+
+    val studentHistoryBarContainer = JPanel().apply {
+        this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+        this.alignmentX = 0F
+    }
+
+    val assignmentSearchBarContainer = JPanel().apply {
+        this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+        this.alignmentX = 0F
     }
 
     content.add(studentHistoryContainer)
     content.add(assignmentSearchContainer)
-
-    studentHistoryContainer.add(JLabel("<html><h2>Student History</h2></html>"))
 
     val studentSearchField = JTextField().apply {
         this.addActionListener {
@@ -321,9 +331,61 @@ private fun dashboardTabProvider(data: List<DPData>) : DPTab {
         this.alignmentX = 0F
     }
 
-    studentHistoryContainer.add(studentSearchField)
-    assignmentSearchContainer.add(assignmentSearchField)
+    val studentHistoryLabel = JLabel("Student History: ")
+    val assignmentSearchLabel = JLabel("Assignments: ")
 
+    maxOf(studentHistoryLabel.preferredWidth, assignmentSearchLabel.preferredWidth).run {
+        studentHistoryLabel.preferredWidth = this
+        assignmentSearchLabel.preferredWidth = this
+    }
+
+    studentHistoryBarContainer.add(studentHistoryLabel)
+    studentHistoryBarContainer.add(studentSearchField)
+
+    assignmentSearchBarContainer.add(assignmentSearchLabel)
+    assignmentSearchBarContainer.add(assignmentSearchField)
+
+    studentHistoryContainer.add(studentHistoryBarContainer)
+    assignmentSearchContainer.add(assignmentSearchBarContainer)
+
+    val buttonPanel = JPanel().apply {
+        this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+        this.alignmentX = 0F
+    }
+
+    buttonPanel.add(Box.createHorizontalGlue())
+
+    buttonPanel.add(
+        JButton("All assignments").apply {
+            this.addActionListener {
+                val loadingPanel = JBLoadingPanel(null, Disposable {  })
+                panel.add(loadingPanel)
+                loadingPanel.startLoading()
+
+                State.client.getAssignments { assignments ->
+                    if (assignments == null) {
+                        JDialog(WindowManager.getInstance().findVisibleFrame(), "Couldn't load assignments.").run {
+                            this.isVisible = true
+                        }
+
+                        loadingPanel.stopLoading()
+                        panel.remove(loadingPanel)
+                    }
+
+                    assignments?.let { data ->
+                        loadingPanel.stopLoading()
+                        panel.remove(loadingPanel)
+                        panel.holder.data = data
+                        panel.navigateForward((panel.holder.getTab(data.first().javaClass.name) as DPTab))
+                    }
+                }
+            }
+        }
+    )
+
+    buttonPanel.add(Box.createHorizontalGlue())
+
+    content.add(buttonPanel)
     content.add(JSeparator(JSeparator.HORIZONTAL))
 
     return panel
