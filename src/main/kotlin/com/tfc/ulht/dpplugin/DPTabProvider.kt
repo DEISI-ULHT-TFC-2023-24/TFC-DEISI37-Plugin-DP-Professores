@@ -171,7 +171,7 @@ open class DPListTab<T : Component>(title: String, addReloadButton: Boolean, add
         if (addSearchBar) {
             rootPanel.add(JTextField().apply {
                 this.addActionListener {
-                    if (allItems.isNotEmpty() && SearchableComponent::class.java in items.first()::class.java.interfaces) {
+                    if (allItems.isNotEmpty() && SearchableComponent::class.java in allItems.first()::class.java.interfaces) {
                         this@DPListTab.clear()
 
                         for (item in allItems) {
