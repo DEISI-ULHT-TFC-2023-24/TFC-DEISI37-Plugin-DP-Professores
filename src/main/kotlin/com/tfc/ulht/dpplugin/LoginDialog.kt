@@ -6,6 +6,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
+import com.intellij.ui.util.preferredWidth
 import com.tfc.ulht.dpplugin.dplib.BASE_URL
 import com.tfc.ulht.dpplugin.dplib.addSuffix
 import okhttp3.Credentials
@@ -43,11 +44,15 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
     }
 
     override fun createCenterPanel(): JComponent = JPanel().apply {
+        val labels = mutableListOf<JLabel>()
+
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
         this.add(JPanel().apply {
             this.layout = BoxLayout(this, BoxLayout.X_AXIS)
 
             val label = JLabel("User: ")
+            labels.add(label)
+
             this.add(label)
             this.add(userField)
 
@@ -68,13 +73,22 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
         this.add(JPanel().apply {
             this.layout = BoxLayout(this, BoxLayout.X_AXIS)
 
-            this.add(JLabel("Token: "))
+
+            JLabel("Token: ").also {
+                labels.add(it)
+                this.add(it)
+            }
+
             this.add(tokenField)
         })
         this.add(JPanel().apply {
             this.layout = BoxLayout(this, BoxLayout.X_AXIS)
 
-            this.add(JLabel("Server: "))
+            JLabel("Server: ").also {
+                labels.add(it)
+                this.add(it)
+            }
+
             this.add(instanceField)
         })
         this.add(JPanel().apply {
@@ -83,5 +97,11 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
             add(loginButton)
         })
         this.add(resultLabel)
+
+        val highestWidth = labels.map { it.preferredWidth }.maxOf { it }
+
+        labels.forEach {
+            it.preferredWidth = highestWidth
+        }
     }
 }
