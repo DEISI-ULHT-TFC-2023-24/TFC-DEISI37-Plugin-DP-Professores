@@ -43,6 +43,7 @@ open class DPTab(addReloadButton: Boolean = false) : JScrollPane(VERTICAL_SCROLL
 
     private val backButton: JButton
     private val forwardButton: JButton
+    private val homeButton: JButton
     val reloadButton: JButton?
 
     var reloadFunction: (() -> Unit)? = null
@@ -59,6 +60,11 @@ open class DPTab(addReloadButton: Boolean = false) : JScrollPane(VERTICAL_SCROLL
 
         this.setViewportView(rootPanel)
 
+        val toolPanel = JPanel().apply {
+            this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+            this.alignmentX = 0F
+        }
+
         backButton = JButton(AllIcons.Actions.Back).apply {
             this.addActionListener {
                 navigateBackwards()
@@ -71,10 +77,19 @@ open class DPTab(addReloadButton: Boolean = false) : JScrollPane(VERTICAL_SCROLL
             }
         }
 
+        homeButton = JButton(AllIcons.Nodes.HomeFolder).apply {
+            this.addActionListener {
+                navigateHome()
+            }
+        }
+
         updateNavButtons()
 
-        rootPanel.add(backButton)
-        rootPanel.add(forwardButton)
+        toolPanel.add(backButton)
+        toolPanel.add(forwardButton)
+        toolPanel.add(homeButton)
+
+        rootPanel.add(toolPanel)
 
         if (addReloadButton) {
             reloadButton = JButton(AllIcons.Actions.Refresh).apply {
@@ -84,7 +99,7 @@ open class DPTab(addReloadButton: Boolean = false) : JScrollPane(VERTICAL_SCROLL
                 }
             }
 
-            rootPanel.add(reloadButton)
+            toolPanel.add(reloadButton)
         } else {
             reloadButton = null
         }
@@ -104,6 +119,7 @@ open class DPTab(addReloadButton: Boolean = false) : JScrollPane(VERTICAL_SCROLL
     private fun updateNavButtons() {
         backButton.isEnabled = parent != null
         forwardButton.isEnabled = next != null
+        homeButton.isEnabled = parent != null
     }
 
     fun navigateForward(tab: DPTab) {
@@ -129,6 +145,23 @@ open class DPTab(addReloadButton: Boolean = false) : JScrollPane(VERTICAL_SCROLL
             holder.panel.removeAll()
             holder.panel.add(it)
             it.updateNavButtons()
+
+            holder.panel.revalidate()
+            holder.panel.repaint()
+        }
+    }
+
+    private fun navigateHome() = parent?.let {
+        SwingUtilities.invokeLater {
+            var parentTab = it
+
+            while (parentTab.parent != null) {
+                parentTab = parentTab.parent!!
+            }
+
+            holder.panel.removeAll()
+            holder.panel.add(parentTab)
+            parentTab.updateNavButtons()
 
             holder.panel.revalidate()
             holder.panel.repaint()
