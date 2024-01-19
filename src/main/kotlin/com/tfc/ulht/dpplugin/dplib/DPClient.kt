@@ -260,7 +260,10 @@ class DPClient {
     }
 
     fun downloadSubmission(submissionId: String, callback: ((InputStream?) -> Unit)) {
-        if (!loggedIn) return
+        if (!loggedIn) {
+            callback(null)
+            return
+        }
 
         val request = Request.Builder()
             .url(BASE_URL + "api/teacher/download/$submissionId")
