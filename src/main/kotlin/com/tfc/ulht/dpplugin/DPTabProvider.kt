@@ -14,9 +14,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.components.JBLoadingPanel
-import com.intellij.ui.util.maximumHeight
-import com.intellij.ui.util.preferredHeight
-import com.intellij.ui.util.preferredWidth
 import com.intellij.util.ui.JBUI
 import com.tfc.ulht.dpplugin.dplib.*
 import com.tfc.ulht.dpplugin.ui.*
@@ -220,7 +217,7 @@ open class DPListTab<T : Component>(title: String, addReloadButton: Boolean, add
                 }
 
                 this.alignmentX = 0F
-                this.maximumHeight = this.preferredHeight
+                this.maximumSize = Dimension(this.maximumSize.width, this.preferredSize.height)
             })
         }
 
@@ -324,7 +321,7 @@ private fun dashboardTabProvider(data: List<DPData>) : DPTab {
             }
         }
 
-        this.maximumHeight = this.preferredHeight
+        this.maximumSize = Dimension(this.maximumSize.width, this.preferredSize.height)
         this.alignmentX = 0F
     }
 
@@ -360,16 +357,16 @@ private fun dashboardTabProvider(data: List<DPData>) : DPTab {
             }
         }
 
-        this.maximumHeight = this.preferredHeight
+        this.maximumSize = Dimension(this.maximumSize.width, this.preferredSize.height)
         this.alignmentX = 0F
     }
 
     val studentHistoryLabel = JLabel("Student History: ")
     val assignmentSearchLabel = JLabel("Assignments: ")
 
-    maxOf(studentHistoryLabel.preferredWidth, assignmentSearchLabel.preferredWidth).run {
-        studentHistoryLabel.preferredWidth = this
-        assignmentSearchLabel.preferredWidth = this
+    maxOf(studentHistoryLabel.preferredSize.width, assignmentSearchLabel.preferredSize.width).run {
+        studentHistoryLabel.preferredSize = Dimension(this, studentHistoryLabel.preferredSize.height)
+        assignmentSearchLabel.preferredSize = Dimension(this, assignmentSearchLabel.preferredSize.height)
     }
 
     studentHistoryBarContainer.add(studentHistoryLabel)

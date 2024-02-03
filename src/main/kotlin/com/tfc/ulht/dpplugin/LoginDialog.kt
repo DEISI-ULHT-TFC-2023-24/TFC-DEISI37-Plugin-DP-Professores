@@ -6,7 +6,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
-import com.intellij.ui.util.preferredWidth
 import com.tfc.ulht.dpplugin.dplib.BASE_URL
 import com.tfc.ulht.dpplugin.dplib.addSuffix
 import okhttp3.Credentials
@@ -98,10 +97,10 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
         })
         this.add(resultLabel)
 
-        val highestWidth = labels.map { it.preferredWidth }.maxOf { it }
+        val highestWidth = labels.map { it.preferredSize.width }.maxOf { it }
 
         labels.forEach {
-            it.preferredWidth = highestWidth
+            it.preferredSize = Dimension(highestWidth, it.preferredSize.height)
         }
     }
 }
