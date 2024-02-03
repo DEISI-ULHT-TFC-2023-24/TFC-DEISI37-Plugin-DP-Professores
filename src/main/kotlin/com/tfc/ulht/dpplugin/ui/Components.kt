@@ -93,11 +93,24 @@ class StudentComponent(private val student: StudentListResponse) : DPComponent()
 
             override fun mouseReleased(e: MouseEvent?) {  }
 
-            override fun mouseEntered(e: MouseEvent?) {  }
+            override fun mouseEntered(e: MouseEvent?) {
+                this@StudentComponent.background = Color(53, 132, 228)
+            }
 
-            override fun mouseExited(e: MouseEvent?) {  }
-
+            override fun mouseExited(e: MouseEvent?) {
+                this@StudentComponent.background = null
+            }
         })
+    }
+
+    override fun paintComponent(g: Graphics?) {
+        super.paintComponent(g)
+
+        this.background?.let {
+            g?.color = it
+            (g as Graphics2D?)?.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            g?.fillRoundRect(0, 0, this.width, this.height - 2, 5, 3)
+        }
     }
 }
 
