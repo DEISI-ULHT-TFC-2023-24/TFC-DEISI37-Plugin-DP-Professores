@@ -23,7 +23,6 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
     private val resultLabel = JBLabel()
 
     init {
-        this.isResizable = false
         this.setSize(250, 150)
 
         init()
@@ -38,6 +37,7 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
                         com.intellij.credentialStore.Credentials(if (res) token else null, BASE_URL))
 
                     resultLabel.text = "Login " + if (res) "successful" else "unsuccessful"
+                    resultLabel.border = BorderFactory.createEmptyBorder(5, 0, 10, 0)
                 }
             }
         }
