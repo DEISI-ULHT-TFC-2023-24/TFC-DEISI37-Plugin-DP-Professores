@@ -46,11 +46,10 @@ class SubmissionsAction : AnAction() {
         }
 
         fun openSubmission(id: String) {
-
             State.client.downloadSubmission(id) {
                 if (it == null) {
                     JOptionPane.showMessageDialog(
-                        null, "Error", "Couldn't download the submission", JOptionPane.ERROR_MESSAGE
+                        null, "Couldn't download the submission", "Error", JOptionPane.ERROR_MESSAGE
                     )
                 } else {
                     val unzippedPath = createFile(id, it)?.let { path -> unzipSubmission(path) }
@@ -59,7 +58,7 @@ class SubmissionsAction : AnAction() {
                         ProjectManager.getInstance().loadAndOpenProject(unzippedPath)
                     } else {
                         JOptionPane.showMessageDialog(
-                            null, "Error", "Couldn't extract the submission", JOptionPane.ERROR_MESSAGE
+                            null, "Couldn't extract the submission", "Error", JOptionPane.ERROR_MESSAGE
                         )
                     }
                 }

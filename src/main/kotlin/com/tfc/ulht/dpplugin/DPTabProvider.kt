@@ -26,14 +26,16 @@ import javax.swing.*
 class DPTabProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile): Boolean = file is com.tfc.ulht.dpplugin.VirtualFile
 
-    override fun createEditor(project: Project, file: VirtualFile): FileEditor = DPTabHolder(project, (file as com.tfc.ulht.dpplugin.VirtualFile).data)
+    override fun createEditor(project: Project, file: VirtualFile): FileEditor =
+        DPTabHolder(project, (file as com.tfc.ulht.dpplugin.VirtualFile).data)
 
     override fun getEditorTypeId(): String = "dp-editor"
 
     override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.HIDE_DEFAULT_EDITOR
 }
 
-open class DPTab(addReloadButton: Boolean = false) : JScrollPane(VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED) {
+open class DPTab(addReloadButton: Boolean = false) :
+    JScrollPane(VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED) {
     lateinit var holder: DPTabHolder
     private var parent: DPTab? = null
     var next: DPTab? = null
@@ -184,7 +186,8 @@ open class DPTab(addReloadButton: Boolean = false) : JScrollPane(VERTICAL_SCROLL
         }.start()
 }
 
-open class DPListTab<T : Component>(title: String, addReloadButton: Boolean, addSearchBar: Boolean = false) : DPTab(addReloadButton) {
+open class DPListTab<T : Component>(title: String, addReloadButton: Boolean, addSearchBar: Boolean = false) :
+    DPTab(addReloadButton) {
     private val allItems: MutableList<T> = mutableListOf()
     private val items: MutableList<T> = mutableListOf()
     val itemsPanel: JPanel = JPanel().apply {
@@ -192,7 +195,7 @@ open class DPListTab<T : Component>(title: String, addReloadButton: Boolean, add
         this.border = JBUI.Borders.empty(0, 10)
     }
 
-    constructor(title:String) : this(title, false)
+    constructor(title: String) : this(title, false)
 
     init {
         rootPanel.border = JBUI.Borders.empty(0, 20)
@@ -249,7 +252,7 @@ open class DPListTab<T : Component>(title: String, addReloadButton: Boolean, add
 }
 
 @Suppress("UNUSED_PARAMETER")
-private fun dashboardTabProvider(data: List<DPData>) : DPTab {
+private fun dashboardTabProvider(data: List<DPData>): DPTab {
     val panel = DPTab().apply {
         this.rootPanel.border = JBUI.Borders.empty(0, 20)
     }
@@ -388,15 +391,18 @@ private fun dashboardTabProvider(data: List<DPData>) : DPTab {
     buttonPanel.add(
         JButton("All assignments").apply {
             this.addActionListener {
-                val loadingPanel = JBLoadingPanel(null, Disposable {  })
+                val loadingPanel = JBLoadingPanel(null, Disposable { })
                 panel.add(loadingPanel)
                 loadingPanel.startLoading()
 
                 State.client.getAssignments { assignments ->
                     if (assignments == null) {
-                        JDialog(WindowManager.getInstance().findVisibleFrame(), "Couldn't load assignments.").run {
-                            this.isVisible = true
-                        }
+                        JOptionPane.showMessageDialog(
+                            WindowManager.getInstance().findVisibleFrame(),
+                            "Couldn't load assignments.",
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE
+                        )
 
                         loadingPanel.stopLoading()
                         panel.remove(loadingPanel)
@@ -422,7 +428,7 @@ private fun dashboardTabProvider(data: List<DPData>) : DPTab {
 }
 
 @Suppress("UNCHECKED_CAST")
-private fun studentHistoryTabProvider(data: List<DPData>) : DPListTab<SubmissionComponent> {
+private fun studentHistoryTabProvider(data: List<DPData>): DPListTab<SubmissionComponent> {
     val root = DPListTab<SubmissionComponent>("Student History")
 
     val studentHistory = data as List<StudentHistoryEntry>
@@ -433,7 +439,7 @@ private fun studentHistoryTabProvider(data: List<DPData>) : DPListTab<Submission
         for (s in entry.sortedSubmissions) {
             root.addItem(SubmissionComponent(s).apply {
                 this.addBuildReportClickListener { _ ->
-                    val loadingPanel = JBLoadingPanel(null, Disposable {  })
+                    val loadingPanel = JBLoadingPanel(null, Disposable { })
                     root.add(loadingPanel)
 
                     State.client.getBuildReport(s.id.toString()) { report ->
@@ -471,43 +477,48 @@ private fun studentHistoryTabProvider(data: List<DPData>) : DPListTab<Submission
 }
 
 @Suppress("UNCHECKED_CAST")
-private fun assignmentTabProvider(data: List<DPData>) : DPListTab<AssignmentComponent> {
+private fun assignmentTabProvider(data: List<DPData>): DPListTab<AssignmentComponent> {
     val root = DPListTab<AssignmentComponent>("Assignments", addReloadButton = false, addSearchBar = true)
 
     val assignments = data as List<Assignment>
 
     assignments.forEach { assignment ->
-        root.addItem(AssignmentComponent(assignment).apply { this.addSubmissionClickListener {
-            val loadingPanel = JBLoadingPanel(null, Disposable {  })
-            root.add(loadingPanel)
+        root.addItem(AssignmentComponent(assignment).apply {
+            this.addSubmissionClickListener {
+                val loadingPanel = JBLoadingPanel(null, Disposable { })
+                root.add(loadingPanel)
 
-            loadingPanel.startLoading()
+                loadingPanel.startLoading()
 
-            State.client.getSubmissions(this.assignment.id) { subs ->
-                if (subs == null) {
-                    JDialog(WindowManager.getInstance().findVisibleFrame(), "Couldn't load submissions.").run {
-                        this.isVisible = true
+                State.client.getSubmissions(this.assignment.id) { subs ->
+                    if (subs == null) {
+                        JOptionPane.showMessageDialog(
+                            WindowManager.getInstance().findVisibleFrame(),
+                            "Couldn't load submissions.",
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE
+                        )
+
+                        loadingPanel.stopLoading()
+                        root.remove(loadingPanel)
                     }
 
-                    loadingPanel.stopLoading()
-                    root.remove(loadingPanel)
-                }
-
-                subs?.let { data ->
-                    loadingPanel.stopLoading()
-                    root.remove(loadingPanel)
-                    root.holder.data = listOf(AssignmentSubmissions(assignment.id, data))
-                    root.navigateForward((root.holder.getTab(AssignmentSubmissions::class.java.name) as DPTab))
+                    subs?.let { data ->
+                        loadingPanel.stopLoading()
+                        root.remove(loadingPanel)
+                        root.holder.data = listOf(AssignmentSubmissions(assignment.id, data))
+                        root.navigateForward((root.holder.getTab(AssignmentSubmissions::class.java.name) as DPTab))
+                    }
                 }
             }
-        }})
+        })
     }
 
     return root
 }
 
 @Suppress("UNCHECKED_CAST")
-fun groupSubmissionsTabProvider(data: List<DPData>) : DPListTab<GroupSubmissionsComponent> {
+fun groupSubmissionsTabProvider(data: List<DPData>): DPListTab<GroupSubmissionsComponent> {
     val root = DPListTab<GroupSubmissionsComponent>("Submissions", addReloadButton = true, addSearchBar = true)
 
     var submissions = (data as List<AssignmentSubmissions>)[0].submissionsResponse
@@ -531,7 +542,7 @@ fun groupSubmissionsTabProvider(data: List<DPData>) : DPListTab<GroupSubmissions
         submissions.forEach {
             root.addItem(GroupSubmissionsComponent(it).apply {
                 this.addBuildReportClickListener { _ ->
-                    val loadingPanel = JBLoadingPanel(null, Disposable {  })
+                    val loadingPanel = JBLoadingPanel(null, Disposable { })
                     root.add(loadingPanel)
 
                     State.client.getBuildReport(it.allSubmissions.first().id.toString()) { report ->
@@ -548,7 +559,7 @@ fun groupSubmissionsTabProvider(data: List<DPData>) : DPListTab<GroupSubmissions
                     SubmissionsAction.openSubmission(it.allSubmissions.first().id.toString())
                 }
                 this.addAllSubmissionsClickListener {
-                    val loadingPanel = JBLoadingPanel(null, Disposable {  })
+                    val loadingPanel = JBLoadingPanel(null, Disposable { })
                     root.add(loadingPanel)
 
                     State.client.getGroupSubmissions(data[0].assignmentId, it.projectGroup.id) { subs ->
@@ -584,7 +595,7 @@ fun groupSubmissionsTabProvider(data: List<DPData>) : DPListTab<GroupSubmissions
 }
 
 @Suppress("UNCHECKED_CAST")
-fun submissionsTabProvider(data: List<DPData>) : DPListTab<SubmissionComponent> {
+fun submissionsTabProvider(data: List<DPData>): DPListTab<SubmissionComponent> {
     val root = DPListTab<SubmissionComponent>("Submissions", addReloadButton = true, addSearchBar = true)
 
     var submissions = (data as List<GroupSubmissions>)[0].allSubmissions
@@ -611,7 +622,7 @@ fun submissionsTabProvider(data: List<DPData>) : DPListTab<SubmissionComponent> 
         submissions.forEach {
             root.addItem(SubmissionComponent(it).apply {
                 this.addBuildReportClickListener { _ ->
-                    val loadingPanel = JBLoadingPanel(null, Disposable {  })
+                    val loadingPanel = JBLoadingPanel(null, Disposable { })
                     root.add(loadingPanel)
 
                     State.client.getBuildReport(it.id.toString()) { report ->
@@ -664,7 +675,7 @@ fun submissionsTabProvider(data: List<DPData>) : DPListTab<SubmissionComponent> 
 }
 
 @Suppress("UNCHECKED_CAST")
-fun buildReportTabProvider(data: List<DPData>) : DPTab {
+fun buildReportTabProvider(data: List<DPData>): DPTab {
     val panel = DPTab().apply {
         rootPanel.border = JBUI.Borders.empty(0, 20)
     }
@@ -712,7 +723,7 @@ class DPTabHolder(val project: Project, var data: List<DPData>) : FileEditor {
 
     override fun <T : Any?> putUserData(key: Key<T>, value: T?) = userData.putUserData(key, value)
 
-    override fun dispose() {  }
+    override fun dispose() {}
 
     override fun getComponent(): JComponent = panel
 
@@ -720,15 +731,15 @@ class DPTabHolder(val project: Project, var data: List<DPData>) : FileEditor {
 
     override fun getName(): String = "DP"
 
-    override fun setState(state: FileEditorState) {  }
+    override fun setState(state: FileEditorState) {}
 
     override fun isModified(): Boolean = false
 
     override fun isValid(): Boolean = true
 
-    override fun addPropertyChangeListener(listener: PropertyChangeListener) {  }
+    override fun addPropertyChangeListener(listener: PropertyChangeListener) {}
 
-    override fun removePropertyChangeListener(listener: PropertyChangeListener) {  }
+    override fun removePropertyChangeListener(listener: PropertyChangeListener) {}
 
     override fun getFile(): VirtualFile = VirtualFile(data)
 }
