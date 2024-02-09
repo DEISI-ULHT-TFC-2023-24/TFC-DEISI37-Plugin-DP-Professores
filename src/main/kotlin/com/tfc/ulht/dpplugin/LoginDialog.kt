@@ -21,6 +21,12 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
     private val loginButton = JButton("Login")
     private val resultLabel = JBLabel()
 
+    private var callback: (() -> Unit)? = null
+
+    constructor(project: Project?, callback: () -> Unit) : this(project) {
+        this.callback = callback
+    }
+
     init {
         this.setSize(250, 150)
 
@@ -37,6 +43,8 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
 
                     resultLabel.text = "Login " + if (res) "successful" else "unsuccessful"
                     resultLabel.border = BorderFactory.createEmptyBorder(5, 0, 10, 0)
+
+                    callback?.let { it() }
                 }
             }
         }

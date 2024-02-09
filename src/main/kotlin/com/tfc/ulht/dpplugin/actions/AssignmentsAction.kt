@@ -1,17 +1,16 @@
 package com.tfc.ulht.dpplugin.actions
 
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBLoadingPanel
 import com.tfc.ulht.dpplugin.State
 import com.tfc.ulht.dpplugin.VirtualFile
 
-class AssignmentsAction : AnAction() {
-    override fun actionPerformed(e: AnActionEvent) {
-        val fileManager = e.project?.let { p -> FileEditorManager.getInstance(p) }
+class AssignmentsAction : DPAction() {
+    override fun perform(project: Project?) {
+        val fileManager = project?.let { p -> FileEditorManager.getInstance(p) }
 
         val loadingPanel = JBLoadingPanel(null, Disposable {  })
 

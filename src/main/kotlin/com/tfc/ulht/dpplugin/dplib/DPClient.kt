@@ -1,5 +1,6 @@
 package com.tfc.ulht.dpplugin.dplib
 
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import okhttp3.*
 import java.io.IOException
@@ -34,8 +35,12 @@ class DPClient {
 
     private var authString: String? = null
 
-    private val loggedIn: Boolean
+    val loggedIn: Boolean
         get() = authString != null
+
+    var loggingIn: Boolean = false
+        private set
+
 
     fun loginBlocking(token: String): Boolean {
         val request = Request.Builder()
@@ -53,6 +58,8 @@ class DPClient {
     }
 
     fun login(token: String, callback: ((Boolean) -> Unit)?) {
+        loggingIn = true
+
         val request = Request.Builder()
             .url(BASE_URL + "api/teacher/assignments/current")
             .header("Authorization", token)
@@ -60,10 +67,12 @@ class DPClient {
 
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                loggingIn = false
                 if (callback != null) callback(false)
             }
 
             override fun onResponse(call: Call, response: Response) {
+                loggingIn = false
                 authString = if (response.isSuccessful) token else null
 
                 if (callback != null) callback(response.isSuccessful)
