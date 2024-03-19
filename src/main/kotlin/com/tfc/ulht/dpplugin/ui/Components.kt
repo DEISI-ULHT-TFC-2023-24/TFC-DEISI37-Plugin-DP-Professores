@@ -40,33 +40,70 @@ class DashboardItemComponent(id: Int, text: String, icon: Icon?, listener: (Int)
     }
 }
 
-open class DPComponent : JComponent() {
-    val fillers: MutableList<Component> = mutableListOf()
+abstract class DPComponent(val padding: Int = 0) : JComponent() {
+    private val cols = mutableSetOf<String>()
+    private val endCols = mutableSetOf<String>()
+    private val bindings = mutableMapOf<String, Component?>()
+
+    private var endFiller: Filler? = null
 
     init {
         this.layout = BoxLayout(this, BoxLayout.X_AXIS)
         this.border = JBUI.Borders.empty(2, 0)
         this.alignmentX = 0.0f
-
-        this.add(Box.createHorizontalGlue())
     }
 
-    fun addComponent(component: Component) {
-        if (component is Filler) {
-            fillers.add(component)
+    protected fun initCols(cols: List<String>) = cols.forEach {
+        this.cols.add(it)
+        bindings.putIfAbsent(it, null)
+    }
+
+    protected fun initEndCols(cols: List<String>) {
+        endCols.addAll(cols)
+    }
+
+    fun getBindings(): Map<String, Component?> = bindings
+    fun getCols(): Set<String> = cols
+
+    protected fun addComponent(key: String, component: Component) {
+        bindings.putIfAbsent(key, component)
+
+        add(component)
+    }
+
+    // protected fun addComponentEnd(component: Component) { add(component, -1) }
+
+    fun updateFillers(colStartPositions: Map<String, Int>) {
+        components.filter { it is Filler && it != endFiller }.forEach { this.remove(it) }
+
+        val componentList = components.filter { it !is Filler }
+
+        val indexedStartPositions = colStartPositions.map {
+            val index = componentList.indexOf(bindings[it.key])
+
+            Pair(index, it.value)
+        }.filter { it.first > 0 }.sortedBy { it.first }
+
+        indexedStartPositions.forEachIndexed { i, it ->
+            val (index, start) = it
+
+            val fillerWidth = componentList[index - 1].let { comp ->
+                val endCoord = (if (i == 0) 0 else indexedStartPositions[i - 1].second) + comp.preferredSize.width
+                start - endCoord
+            }
+
+            val realIndex = components.indexOf(componentList[index])
+
+            add(Box.createRigidArea(Dimension(fillerWidth, 0)), realIndex)
         }
 
-        for (i in components.indices) {
-            if (components[i] is Filler && !fillers.contains(components[i])) {
-                add(component, i)
-                return
+        if (endCols.isNotEmpty() && endFiller == null) {
+            Box.createHorizontalGlue().let {
+                endFiller = it as Filler?
+                add(it, components.indexOf(bindings[endCols.first()]))
             }
         }
-
-        add(component, -1)
     }
-
-    protected fun addComponentEnd(component: Component) = add(component, -1)
 }
 
 interface SearchableComponent {
@@ -74,15 +111,20 @@ interface SearchableComponent {
 }
 
 class StudentComponent(private val student: StudentListResponse) : DPComponent() {
-    private val nameLabel: JLabel
-    private val idLabel: JLabel
+    private val nameLabel: JLabel = CustomLabel(student.text + ": ")
+    private val idLabel: JLabel = JLabel(student.value)
 
     init {
-        nameLabel = CustomLabel(student.text + ": ")
-        this.addComponent(nameLabel)
+        initCols(
+            listOf(
+                "Name",
+                "ID"
+            )
+        )
 
-        idLabel = JLabel(student.value)
-        this.addComponent(idLabel)
+        this.addComponent("Name", nameLabel)
+        this.addComponent("ID", idLabel)
+        this.add(Box.createHorizontalGlue())
     }
 
     fun addOnClickListener(callback: (StudentListResponse) -> Unit) {
@@ -114,21 +156,34 @@ class StudentComponent(private val student: StudentListResponse) : DPComponent()
     }
 }
 
-class AssignmentComponent(val assignment: Assignment) : DPComponent(), SearchableComponent {
+class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10), SearchableComponent {
     val idLabel: JLabel
     val submissionsLabel: JLabel
 
     init {
+        initCols(
+            listOf(
+                "Id",
+                "Due",
+                "Sub. nº",
+                "Submissions"
+            )
+        )
+
+        initEndCols(
+            listOf(
+                "Submissions"
+            )
+        )
+
         idLabel = CustomLabel(assignment.id)
-        this.addComponent(idLabel)
+        this.addComponent("Id", idLabel)
 
         assignment.dueDate?.let {
-            this.addComponent(Box.createRigidArea(Dimension(10, 0)))
-            this.addComponent(LabelWithDescription(it, "due"))
+            this.addComponent("Due", LabelWithDescription(it, "due"))
         }
 
-        this.addComponent(Box.createRigidArea(Dimension(10, 0)))
-        this.addComponent(LabelWithDescription(assignment.numSubmissions.toString(), "submissions"))
+        this.addComponent("Sub. nº", LabelWithDescription(assignment.numSubmissions.toString(), "submissions"))
 
         submissionsLabel = JLabel("Submissions").apply {
             this.foreground = JBColor.BLUE
@@ -140,7 +195,7 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent(), Searchabl
             this.cursor = Cursor(Cursor.HAND_CURSOR)
         }
 
-        this.addComponentEnd(submissionsLabel)
+        this.addComponent("Submissions", submissionsLabel)
     }
 
     fun addSubmissionClickListener(listener: (MouseEvent?) -> Unit) = submissionsLabel.addMouseListener(object : MouseListener {
@@ -179,39 +234,62 @@ class TestResultsComponent(results: JUnitSummary, description: String) : LabelWi
     }
 }
 
-class GroupSubmissionsComponent(private val submissions: SubmissionsResponse) : DPComponent(), SearchableComponent {
+class GroupSubmissionsComponent(private val submissions: SubmissionsResponse) : DPComponent(padding = 10), SearchableComponent {
+
     private val idLabel: JLabel
     private val allSubmissions: NumberBox
     private val submissionDownloadLabel: JLabel
     private val buildReportLabel: JLabel
 
     init {
+        initCols(
+            listOf(
+                "ID",
+                "Last submission",
+                "Last status",
+                "Teacher Tests",
+                "Student Tests",
+                "Hidden Tests",
+                "Build Report",
+                "Download",
+
+            )
+        )
+
+        initEndCols(
+            listOf(
+                "Build Report",
+                "Download"
+            )
+        )
+
         idLabel = CustomLabel(submissions.projectGroup.authors.joinToString(separator = ",") { "${it.id}-${it.name}" })
-        this.addComponent(idLabel)
+        this.addComponent("ID", idLabel)
 
-        this.addComponent(Box.createRigidArea(Dimension(10, 0)))
-        this.addComponent(LabelWithDescription(submissions.lastSubmission.submissionDate, "last submission"))
+        this.addComponent("Last submission", LabelWithDescription(submissions.lastSubmission.submissionDate, "last submission"))
 
-        this.addComponent(Box.createRigidArea(Dimension(10, 0)))
-        this.addComponent(LabelWithDescription(submissions.lastSubmission.status, "last status"))
+        val statusPanel = JPanel().apply {
+            this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+        }
 
-        this.addComponent(Box.createRigidArea(Dimension(10, 0)))
+        statusPanel.add(LabelWithDescription(submissions.lastSubmission.status, "last status"))
+
         allSubmissions = NumberBox(submissions.allSubmissions.size)
-        this.addComponent(allSubmissions)
+        statusPanel.add(Box.createRigidArea(Dimension(5, 0)))
+        statusPanel.add(allSubmissions)
+
+        this.addComponent("Last status", statusPanel)
 
         submissions.lastSubmission.teacherTests?.let {
-            this.addComponent(Box.createRigidArea(Dimension(10, 0)))
-            this.addComponent(TestResultsComponent(it, "Teacher Tests"))
+            this.addComponent("Teacher Tests", TestResultsComponent(it, "Teacher Tests"))
         }
 
         submissions.lastSubmission.studentTests?.let {
-            this.addComponent(Box.createRigidArea(Dimension(10, 0)))
-            this.addComponent(TestResultsComponent(it, "Teacher Tests"))
+            this.addComponent("Student Tests", TestResultsComponent(it, "Student Tests"))
         }
 
         submissions.lastSubmission.hiddenTests?.let {
-            this.addComponent(Box.createRigidArea(Dimension(10, 0)))
-            this.addComponent(TestResultsComponent(it, "Teacher Tests"))
+            this.addComponent("Hidden Tests", TestResultsComponent(it, "Hidden Tests"))
         }
 
         buildReportLabel = JLabel("Build Report").apply {
@@ -234,9 +312,8 @@ class GroupSubmissionsComponent(private val submissions: SubmissionsResponse) : 
             this.cursor = Cursor(Cursor.HAND_CURSOR)
         }
         
-        this.addComponentEnd(buildReportLabel)
-        this.addComponentEnd(Box.createRigidArea(Dimension(10, 0)))
-        this.addComponentEnd(submissionDownloadLabel)
+        this.addComponent("Build Report", buildReportLabel)
+        this.addComponent("Download", submissionDownloadLabel)
     }
 
     fun addSubmissionDownloadClickListener(listener: (MouseEvent?) -> Unit) = submissionDownloadLabel.addMouseListener(object : MouseListener {
@@ -355,7 +432,7 @@ class NumberBox(number: Int) : JComponent() {
     }
 }
 
-class SubmissionComponent(var submission: Submission) : DPComponent(), SearchableComponent {
+class SubmissionComponent(var submission: Submission) : DPComponent(padding = 10), SearchableComponent {
     private val idHolder: JPanel = JPanel().apply {
         this.layout = BoxLayout(this, BoxLayout.X_AXIS)
     }
@@ -366,6 +443,25 @@ class SubmissionComponent(var submission: Submission) : DPComponent(), Searchabl
     private val buildReportLabel: JLabel
 
     init {
+        initCols(
+            listOf(
+                "ID",
+                "Teacher Tests",
+                "Student Tests",
+                "Hidden Tests",
+                "Build Report",
+                "Mark as Final",
+                "Download"
+            )
+        )
+
+        initEndCols(
+            listOf(
+                "Build Report",
+                "Mark as Final",
+                "Download"
+            )
+        )
 
         val date = DatatypeFactory.newInstance().newXMLGregorianCalendar(submission.submissionDate)
             .toGregorianCalendar().toZonedDateTime()
@@ -375,7 +471,7 @@ class SubmissionComponent(var submission: Submission) : DPComponent(), Searchabl
 
         if (submission.markedAsFinal) idHolder.add(JLabel(AllIcons.Nodes.Function))
 
-        this.addComponent(idHolder)
+        this.addComponent("ID", idHolder)
 
         submissionDownloadLabel = JLabel("Download").apply {
             this.foreground = JBColor.BLUE
@@ -399,18 +495,15 @@ class SubmissionComponent(var submission: Submission) : DPComponent(), Searchabl
         }
 
         submission.teacherTests?.let {
-            this.addComponent(Box.createRigidArea(Dimension(10, 0)))
-            this.addComponent(TestResultsComponent(it, "Teacher Tests"))
+            this.addComponent("Teacher Tests", TestResultsComponent(it, "Teacher Tests"))
         }
 
         submission.studentTests?.let {
-            this.addComponent(Box.createRigidArea(Dimension(10, 0)))
-            this.addComponent(TestResultsComponent(it, "Teacher Tests"))
+            this.addComponent("Student Tests", TestResultsComponent(it, "Student Tests"))
         }
 
         submission.hiddenTests?.let {
-            this.addComponent(Box.createRigidArea(Dimension(10, 0)))
-            this.addComponent(TestResultsComponent(it, "Teacher Tests"))
+            this.addComponent("Hidden Tests", TestResultsComponent(it, "Hidden Tests"))
         }
 
         buildReportLabel = JLabel("Build Report").apply {
@@ -423,11 +516,9 @@ class SubmissionComponent(var submission: Submission) : DPComponent(), Searchabl
             this.cursor = Cursor(Cursor.HAND_CURSOR)
         }
 
-        this.addComponentEnd(buildReportLabel)
-        this.addComponentEnd(Box.createRigidArea(Dimension(10, 0)))
-        this.addComponentEnd(markAsFinalLabel)
-        this.addComponentEnd(Box.createRigidArea(Dimension(10, 0)))
-        this.addComponentEnd(submissionDownloadLabel)
+        this.addComponent("Build Report", buildReportLabel)
+        this.addComponent("Mark as Final", markAsFinalLabel)
+        this.addComponent("Download", submissionDownloadLabel)
     }
 
     fun addSubmissionDownloadClickListener(listener: (MouseEvent?) -> Unit) = submissionDownloadLabel.addMouseListener(object : MouseListener {
@@ -509,14 +600,26 @@ class SubmissionComponent(var submission: Submission) : DPComponent(), Searchabl
 
 class SubmissionReportComponent(report: SubmissionReport) : DPComponent() {
     init {
-        this.addComponent(JLabel(report.reportKey))
-        this.addComponentEnd(JLabel(report.reportValue))
+        initCols(
+            listOf("Report", "Value")
+        )
+
+        initEndCols(
+            listOf("Value")
+        )
+
+        this.addComponent("Report", JLabel(report.reportKey))
+        this.addComponent("Value", JLabel(report.reportValue))
     }
 }
 
 class BuildReportComponent(report: BuildReport) : DPComponent() {
     init {
-        this.addComponent(JLabel(report.junitSummaryTeacher))
+        initCols(
+            listOf("Summary")
+        )
+
+        this.addComponent("Summary", JLabel(report.junitSummaryTeacher))
     }
 }
 

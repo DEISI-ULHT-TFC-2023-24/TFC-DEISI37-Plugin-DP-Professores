@@ -186,7 +186,7 @@ open class DPTab(addReloadButton: Boolean = false) :
         }.start()
 }
 
-open class DPListTab<T : Component>(title: String, addReloadButton: Boolean, addSearchBar: Boolean = false) :
+open class DPListTab<T : DPComponent>(title: String, addReloadButton: Boolean, addSearchBar: Boolean = false) :
     DPTab(addReloadButton) {
     private val allItems: MutableList<T> = mutableListOf()
     private val items: MutableList<T> = mutableListOf()
@@ -194,6 +194,8 @@ open class DPListTab<T : Component>(title: String, addReloadButton: Boolean, add
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
         this.border = JBUI.Borders.empty(0, 10)
     }
+
+    private val colAssoc: MutableMap<String, MutableList<Component>> = mutableMapOf()
 
     constructor(title: String) : this(title, false)
 
@@ -214,8 +216,7 @@ open class DPListTab<T : Component>(title: String, addReloadButton: Boolean, add
                             }
                         }
 
-                        this@DPListTab.itemsPanel.revalidate()
-                        this@DPListTab.itemsPanel.repaint()
+                        redraw()
                     }
                 }
 
@@ -225,6 +226,47 @@ open class DPListTab<T : Component>(title: String, addReloadButton: Boolean, add
         }
 
         rootPanel.add(itemsPanel)
+    }
+
+    fun redraw() {
+        colAssoc.clear()
+
+        items.forEach {
+            it.getBindings().forEach { (k, v) ->
+                colAssoc.putIfAbsent(k, mutableListOf())
+
+                v?.let {
+                    colAssoc[k]?.add(v)
+                }
+            }
+        }
+
+        this.itemsPanel.revalidate()
+        this.itemsPanel.repaint()
+
+        val colStartPositions = mutableMapOf<String, Int>()
+        val cols = items.firstOrNull()?.getCols() ?: return
+
+        var acc = 0
+
+        for (i in 0 until cols.size - 1) {
+            val it = cols.elementAt(i)
+
+            colStartPositions.putIfAbsent(it, 0)
+
+            val colItems = colAssoc[it]!!
+            val value = colItems.maxOfOrNull { item -> item.preferredSize.width + (item.parent as DPComponent).padding } ?: 0
+
+            colStartPositions[cols.elementAt(i + 1)] = acc + value
+            acc += value
+        }
+
+        items.forEach {
+            it.updateFillers(colStartPositions)
+        }
+
+        this.itemsPanel.revalidate()
+        this.itemsPanel.repaint()
     }
 
     fun addItem(component: T) {
@@ -303,22 +345,20 @@ private fun dashboardTabProvider(data: List<DPData>): DPTab {
                     studentHistoryContainer.revalidate()
                     studentHistoryContainer.repaint()
 
-                    it?.let {
-                        for (student in it) {
-                            studentHistoryContainer.add(StudentComponent(student).apply {
-                                this.addOnClickListener { r ->
-                                    State.client.getStudentHistory(r.value) { sh ->
-                                        sh?.let {
-                                            panel.holder.data = sh.history
-                                            panel.navigateForward(panel.holder.getTab(StudentHistoryEntry::class.java.name) as DPTab)
-                                        }
+                    it?.forEach { student ->
+                        studentHistoryContainer.add(StudentComponent(student).apply {
+                            this.addOnClickListener { r ->
+                                State.client.getStudentHistory(r.value) { sh ->
+                                    sh?.let {
+                                        panel.holder.data = sh.history
+                                        panel.navigateForward(panel.holder.getTab(StudentHistoryEntry::class.java.name) as DPTab)
                                     }
                                 }
-                            })
+                            }
+                        })
 
-                            studentHistoryContainer.revalidate()
-                            studentHistoryContainer.repaint()
-                        }
+                        studentHistoryContainer.revalidate()
+                        studentHistoryContainer.repaint()
                     }
                 }
             }
@@ -471,6 +511,8 @@ private fun studentHistoryTabProvider(data: List<DPData>): DPListTab<SubmissionC
                 }
             })
         }
+
+        root.redraw()
     }
 
     return root
@@ -513,6 +555,8 @@ private fun assignmentTabProvider(data: List<DPData>): DPListTab<AssignmentCompo
             }
         })
     }
+
+    root.redraw()
 
     return root
 }
@@ -574,6 +618,8 @@ fun groupSubmissionsTabProvider(data: List<DPData>): DPListTab<GroupSubmissionsC
                 }
             })
         }
+
+        root.redraw()
     }
 
     root.reloadFunction = {
@@ -654,6 +700,8 @@ fun submissionsTabProvider(data: List<DPData>): DPListTab<SubmissionComponent> {
                 }
             })
         }
+
+        root.redraw()
     }
 
     root.reloadFunction = {
