@@ -1,6 +1,5 @@
 package com.tfc.ulht.dpplugin.dplib
 
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import okhttp3.*
 import java.io.IOException
@@ -196,7 +195,7 @@ class DPClient {
         })
     }
 
-    fun getGroupSubmissionsBlocking(assignmentId: String, groupId: Int): List<SubmissionsResponse>? {
+    fun getGroupSubmissionsBlocking(assignmentId: String, groupId: Int): List<Submission>? {
         if (!loggedIn) return null
 
         val request = Request.Builder()
@@ -206,10 +205,10 @@ class DPClient {
 
         return client.newCall(request).execute().let { response ->
             try {
-                val submissions = json.decodeFromString<List<SubmissionsResponse>>(response.body!!.string())
+                val submissions = json.decodeFromString<List<Submission>>(response.body!!.string())
                 response.close()
                 submissions
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 response.close()
                 null
             }

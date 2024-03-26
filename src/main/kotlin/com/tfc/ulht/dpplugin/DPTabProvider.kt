@@ -572,11 +572,9 @@ fun groupSubmissionsTabProvider(data: List<DPData>): DPListTab<GroupSubmissionsC
         var ret = false
         val response = State.client.getSubmissionsBlocking(data[0].assignmentId)
 
-        if (response != null) {
-            if (response != submissions) {
-                ret = true
-                submissionsCache = response
-            }
+        if (response != null && response != submissions) {
+            ret = true
+            submissionsCache = response
         }
 
         ret
@@ -652,12 +650,9 @@ fun submissionsTabProvider(data: List<DPData>): DPListTab<SubmissionComponent> {
         val response = State.client.getGroupSubmissionsBlocking(data[0].assignmentId, data[0].groupId)
 
         if (response != null) {
-            for (i in response) {
-                if (i.projectGroup.id == data[0].groupId && i.allSubmissions != submissions) {
-                    ret = true
-                    submissionsCache = i.allSubmissions
-                    break
-                }
+            if (response != submissionsCache) {
+                ret = true
+                submissionsCache = response
             }
         }
 
