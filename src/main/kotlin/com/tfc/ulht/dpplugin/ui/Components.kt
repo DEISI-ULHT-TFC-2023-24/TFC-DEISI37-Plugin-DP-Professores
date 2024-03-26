@@ -64,6 +64,7 @@ abstract class DPComponent(val padding: Int = 0) : JComponent() {
 
     fun getBindings(): Map<String, Component?> = bindings
     fun getCols(): Set<String> = cols
+    fun getEndCols(): Set<String> = endCols
 
     protected fun addComponent(key: String, component: Component) {
         bindings.putIfAbsent(key, component)
@@ -180,10 +181,10 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10
         this.addComponent("Id", idLabel)
 
         assignment.dueDate?.let {
-            this.addComponent("Due", LabelWithDescription(it, "due"))
+            this.addComponent("Due", JLabel(it,))
         }
 
-        this.addComponent("Sub. nº", LabelWithDescription(assignment.numSubmissions.toString(), "submissions"))
+        this.addComponent("Sub. nº", JLabel(assignment.numSubmissions.toString()))
 
         submissionsLabel = JLabel("Submissions").apply {
             this.foreground = JBColor.BLUE
@@ -223,13 +224,13 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10
     }
 }
 
-class TestResultsComponent(results: JUnitSummary, description: String) : LabelWithDescription("", description) {
+class TestResultsComponent(results: JUnitSummary) : JLabel() {
     init {
         val progress = results.numTests - (results.numErrors + results.numFailures)
-        this.contentLabel.text = progress.toString() + "/" + results.numTests
+        this.text = progress.toString() + "/" + results.numTests
 
         (if (progress >= results.numTests) JBColor.GREEN else JBColor.RED).run {
-            this@TestResultsComponent.contentLabel.foreground = this
+            this@TestResultsComponent.foreground = this
         }
     }
 }
@@ -266,13 +267,13 @@ class GroupSubmissionsComponent(private val submissions: SubmissionsResponse) : 
         idLabel = CustomLabel(submissions.projectGroup.authors.joinToString(separator = ",") { "${it.id}-${it.name}" })
         this.addComponent("ID", idLabel)
 
-        this.addComponent("Last submission", LabelWithDescription(submissions.lastSubmission.submissionDate, "last submission"))
+        this.addComponent("Last submission", JLabel(submissions.lastSubmission.submissionDate))
 
         val statusPanel = JPanel().apply {
             this.layout = BoxLayout(this, BoxLayout.X_AXIS)
         }
 
-        statusPanel.add(LabelWithDescription(submissions.lastSubmission.status, "last status"))
+        statusPanel.add(JLabel(submissions.lastSubmission.status))
 
         allSubmissions = NumberBox(submissions.allSubmissions.size)
         statusPanel.add(Box.createRigidArea(Dimension(5, 0)))
@@ -281,15 +282,15 @@ class GroupSubmissionsComponent(private val submissions: SubmissionsResponse) : 
         this.addComponent("Last status", statusPanel)
 
         submissions.lastSubmission.teacherTests?.let {
-            this.addComponent("Teacher Tests", TestResultsComponent(it, "Teacher Tests"))
+            this.addComponent("Teacher Tests", TestResultsComponent(it))
         }
 
         submissions.lastSubmission.studentTests?.let {
-            this.addComponent("Student Tests", TestResultsComponent(it, "Student Tests"))
+            this.addComponent("Student Tests", TestResultsComponent(it))
         }
 
         submissions.lastSubmission.hiddenTests?.let {
-            this.addComponent("Hidden Tests", TestResultsComponent(it, "Hidden Tests"))
+            this.addComponent("Hidden Tests", TestResultsComponent(it))
         }
 
         buildReportLabel = JLabel("Build Report").apply {
@@ -354,25 +355,6 @@ class GroupSubmissionsComponent(private val submissions: SubmissionsResponse) : 
         }
 
         return true
-    }
-}
-
-open class LabelWithDescription(text: String, description: String) : JComponent() {
-    protected val descriptionLabel: JLabel
-    protected val contentLabel: JLabel
-
-    init {
-        this.layout = BoxLayout(this, BoxLayout.X_AXIS)
-
-        descriptionLabel = JLabel("$description:").apply {
-            this.font = JBFont.small().asBold()
-            this.alignmentY = 0.4f
-        }
-
-        this.add(descriptionLabel)
-
-        contentLabel = JLabel(text)
-        this.add(contentLabel)
     }
 }
 
@@ -495,15 +477,15 @@ class SubmissionComponent(var submission: Submission) : DPComponent(padding = 10
         }
 
         submission.teacherTests?.let {
-            this.addComponent("Teacher Tests", TestResultsComponent(it, "Teacher Tests"))
+            this.addComponent("Teacher Tests", TestResultsComponent(it))
         }
 
         submission.studentTests?.let {
-            this.addComponent("Student Tests", TestResultsComponent(it, "Student Tests"))
+            this.addComponent("Student Tests", TestResultsComponent(it))
         }
 
         submission.hiddenTests?.let {
-            this.addComponent("Hidden Tests", TestResultsComponent(it, "Hidden Tests"))
+            this.addComponent("Hidden Tests", TestResultsComponent(it))
         }
 
         buildReportLabel = JLabel("Build Report").apply {

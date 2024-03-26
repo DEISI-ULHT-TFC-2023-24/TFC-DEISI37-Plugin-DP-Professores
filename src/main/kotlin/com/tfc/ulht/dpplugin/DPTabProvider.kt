@@ -14,6 +14,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.components.JBLoadingPanel
+import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.tfc.ulht.dpplugin.dplib.*
 import com.tfc.ulht.dpplugin.ui.*
@@ -188,6 +189,19 @@ open class DPTab(addReloadButton: Boolean = false) :
 
 open class DPListTab<T : DPComponent>(title: String, addReloadButton: Boolean, addSearchBar: Boolean = false) :
     DPTab(addReloadButton) {
+
+    class HeaderComponent(cols: Set<String>) : DPComponent() {
+        init {
+            initCols(cols.toList())
+
+            cols.forEach {
+                this.addComponent(it, JLabel(it).apply {
+                    font = JBFont.regular().asBold()
+                })
+            }
+        }
+    }
+
     private val allItems: MutableList<T> = mutableListOf()
     private val items: MutableList<T> = mutableListOf()
     val itemsPanel: JPanel = JPanel().apply {
@@ -196,6 +210,8 @@ open class DPListTab<T : DPComponent>(title: String, addReloadButton: Boolean, a
     }
 
     private val colAssoc: MutableMap<String, MutableList<Component>> = mutableMapOf()
+
+    private var header: HeaderComponent? = null
 
     constructor(title: String) : this(title, false)
 
@@ -231,6 +247,11 @@ open class DPListTab<T : DPComponent>(title: String, addReloadButton: Boolean, a
     fun redraw() {
         colAssoc.clear()
 
+        header?.let {
+            itemsPanel.remove(it)
+            header = null
+        }
+
         items.forEach {
             it.getBindings().forEach { (k, v) ->
                 colAssoc.putIfAbsent(k, mutableListOf())
@@ -246,6 +267,15 @@ open class DPListTab<T : DPComponent>(title: String, addReloadButton: Boolean, a
 
         val colStartPositions = mutableMapOf<String, Int>()
         val cols = items.firstOrNull()?.getCols() ?: return
+        val endCols = items.first().getEndCols()
+
+        header = HeaderComponent(cols.filter { it !in endCols && colAssoc[it]?.isNotEmpty() == true }.toSet())
+
+        header!!.getBindings().forEach { (k, v) ->
+            colAssoc[k]?.add(v!!)
+        }
+
+        itemsPanel.add(header!!, itemsPanel.components.indexOf(items.first()))
 
         var acc = 0
 
@@ -264,6 +294,8 @@ open class DPListTab<T : DPComponent>(title: String, addReloadButton: Boolean, a
         items.forEach {
             it.updateFillers(colStartPositions)
         }
+
+        header!!.updateFillers(colStartPositions)
 
         this.itemsPanel.revalidate()
         this.itemsPanel.repaint()
