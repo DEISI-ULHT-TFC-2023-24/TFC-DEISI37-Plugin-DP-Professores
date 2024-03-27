@@ -370,8 +370,8 @@ private fun dashboardTabProvider(data: List<DPData>): DPTab {
         this.addActionListener {
             State.client.searchStudents(this.text) {
                 SwingUtilities.invokeLater {
-                    while (studentHistoryContainer.componentCount > 2) {
-                        studentHistoryContainer.remove(2)
+                    while (studentHistoryContainer.componentCount > 1) {
+                        studentHistoryContainer.remove(1)
                     }
 
                     studentHistoryContainer.revalidate()
