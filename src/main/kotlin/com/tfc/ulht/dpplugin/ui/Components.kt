@@ -232,13 +232,18 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10
     }
 }
 
-class TestResultsComponent(results: JUnitSummary) : JLabel() {
+class TestResultsComponent(results: JUnitSummary?) : JLabel() {
     init {
-        val progress = results.numTests - (results.numErrors + results.numFailures)
-        this.text = progress.toString() + "/" + results.numTests
+        if (results == null) {
+            this.text = "Structure"
+            this.foreground = JBColor.RED
+        } else {
+            val progress = results.numTests - (results.numErrors + results.numFailures)
+            this.text = progress.toString() + "/" + results.numTests
 
-        (if (progress >= results.numTests) JBColor.GREEN else JBColor.RED).run {
-            this@TestResultsComponent.foreground = this
+            (if (progress >= results.numTests) JBColor.GREEN else JBColor.RED).run {
+                this@TestResultsComponent.foreground = this
+            }
         }
     }
 }
@@ -289,9 +294,7 @@ class GroupSubmissionsComponent(private val submissions: SubmissionsResponse) : 
 
         this.addComponent("Last status", statusPanel)
 
-        submissions.lastSubmission.teacherTests?.let {
-            this.addComponent("Teacher Tests", TestResultsComponent(it))
-        }
+        this.addComponent("Teacher Tests", TestResultsComponent(submissions.lastSubmission.teacherTests))
 
         submissions.lastSubmission.studentTests?.let {
             this.addComponent("Student Tests", TestResultsComponent(it))
@@ -484,9 +487,7 @@ class SubmissionComponent(var submission: Submission) : DPComponent(padding = 10
             this.cursor = if (!submission.markedAsFinal) Cursor(Cursor.HAND_CURSOR) else null
         }
 
-        submission.teacherTests?.let {
-            this.addComponent("Teacher Tests", TestResultsComponent(it))
-        }
+        this.addComponent("Teacher Tests", TestResultsComponent(submission.teacherTests))
 
         submission.studentTests?.let {
             this.addComponent("Student Tests", TestResultsComponent(it))
