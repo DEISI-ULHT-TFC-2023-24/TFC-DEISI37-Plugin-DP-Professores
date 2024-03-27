@@ -164,7 +164,7 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10
     init {
         initCols(
             listOf(
-                "Id",
+                "ID",
                 "Due",
                 "Sub. nº",
                 "Submissions"
@@ -177,8 +177,16 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10
             )
         )
 
+        val idHolder = JPanel().apply {
+            this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+        }
+
         idLabel = CustomLabel(assignment.id)
-        this.addComponent("Id", idLabel)
+        idHolder.add(idLabel)
+
+        if (!assignment.active) idHolder.add(JLabel(AllIcons.Vcs.Remove))
+
+        this.addComponent("ID", idHolder)
 
         assignment.dueDate?.let {
             this.addComponent("Due", JLabel(it,))
