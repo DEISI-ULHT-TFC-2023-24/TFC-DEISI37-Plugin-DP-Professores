@@ -23,6 +23,8 @@ import java.awt.Dimension
 import java.awt.Graphics
 import java.beans.PropertyChangeListener
 import javax.swing.*
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 
 class DPTabProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile): Boolean = file is com.tfc.ulht.dpplugin.VirtualFile
@@ -325,6 +327,8 @@ open class DPListTab<T : DPComponent>(title: String, addReloadButton: Boolean, a
     }
 }
 
+const val MIN_SEARCH_CHARACTERS = 3
+
 @Suppress("UNUSED_PARAMETER")
 private fun dashboardTabProvider(data: List<DPData>): DPTab {
     val panel = DPTab().apply {
@@ -367,7 +371,7 @@ private fun dashboardTabProvider(data: List<DPData>): DPTab {
     content.add(assignmentSearchContainer)
 
     val studentSearchField = JTextField().apply {
-        this.addActionListener {
+        fun search() {
             State.client.searchStudents(this.text) {
                 SwingUtilities.invokeLater {
                     while (studentHistoryContainer.componentCount > 1) {
@@ -395,6 +399,22 @@ private fun dashboardTabProvider(data: List<DPData>): DPTab {
                 }
             }
         }
+
+        this.addActionListener { search() }
+        this.document.addDocumentListener(object : DocumentListener {
+            fun listener() {
+                if (document.length >= MIN_SEARCH_CHARACTERS) {
+                    search()
+                }
+            }
+
+            override fun insertUpdate(e: DocumentEvent?) = listener()
+
+            override fun removeUpdate(e: DocumentEvent?) = listener()
+
+            override fun changedUpdate(e: DocumentEvent?) = listener()
+
+        })
 
         this.maximumSize = Dimension(this.maximumSize.width, this.preferredSize.height)
         this.alignmentX = 0F
