@@ -73,7 +73,9 @@ data class JUnitSummary(
 data class SubmissionsResponse(
     val projectGroup: ProjectGroup,
     val lastSubmission: Submission,
-    val allSubmissions: List<Submission>
+    val numSubmissions: Int = 0,
+    // TODO: Remove this
+    val allSubmissions: List<Submission> = listOf()
 ) : DPData
 
 data class AssignmentSubmissions(

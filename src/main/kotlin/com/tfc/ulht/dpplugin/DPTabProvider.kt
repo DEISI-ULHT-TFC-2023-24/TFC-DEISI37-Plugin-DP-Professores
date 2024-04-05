@@ -627,7 +627,7 @@ fun groupSubmissionsTabProvider(data: List<DPData>): DPListTab<GroupSubmissionsC
                     val loadingPanel = JBLoadingPanel(null, Disposable { })
                     root.add(loadingPanel)
 
-                    State.client.getBuildReport(it.allSubmissions.first().id.toString()) { report ->
+                    State.client.getBuildReport(it.lastSubmission.id.toString()) { report ->
                         loadingPanel.stopLoading()
                         root.remove(loadingPanel)
 
@@ -638,7 +638,7 @@ fun groupSubmissionsTabProvider(data: List<DPData>): DPListTab<GroupSubmissionsC
                     }
                 }
                 this.addSubmissionDownloadClickListener { _ ->
-                    SubmissionsAction.openSubmission(it.allSubmissions.first().id.toString())
+                    SubmissionsAction.openSubmission(it.lastSubmission.id.toString())
                 }
                 this.addAllSubmissionsClickListener {
                     val loadingPanel = JBLoadingPanel(null, Disposable { })

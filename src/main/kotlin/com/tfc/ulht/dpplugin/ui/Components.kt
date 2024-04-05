@@ -294,7 +294,7 @@ class GroupSubmissionsComponent(private val submissions: SubmissionsResponse) : 
 
         statusPanel.add(JLabel(submissions.lastSubmission.status))
 
-        allSubmissions = NumberBox(submissions.allSubmissions.size)
+        allSubmissions = NumberBox(submissions.numSubmissions)
         statusPanel.add(Box.createRigidArea(Dimension(5, 0)))
         statusPanel.add(allSubmissions)
 
