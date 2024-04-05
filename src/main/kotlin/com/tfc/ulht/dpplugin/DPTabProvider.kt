@@ -23,8 +23,6 @@ import java.awt.Dimension
 import java.awt.Graphics
 import java.beans.PropertyChangeListener
 import javax.swing.*
-import javax.swing.event.DocumentEvent
-import javax.swing.event.DocumentListener
 
 class DPTabProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile): Boolean = file is com.tfc.ulht.dpplugin.VirtualFile
@@ -189,7 +187,8 @@ open class DPTab(addReloadButton: Boolean = false) :
         }.start()
 }
 
-open class DPListTab<T : DPComponent>(title: String, addReloadButton: Boolean, addSearchBar: Boolean = false) :
+open class DPListTab<T : DPComponent>(title: String, addReloadButton: Boolean, addSearchBar: Boolean = false,
+                                      searchBarHint: String = "", searchBarDescription: String = "") :
     DPTab(addReloadButton) {
 
     class HeaderComponent(cols: Set<String>) : DPComponent() {
@@ -223,7 +222,7 @@ open class DPListTab<T : DPComponent>(title: String, addReloadButton: Boolean, a
         rootPanel.add(JLabel("<html><h1>$title</h1></html>").apply { alignmentX = 0.0f })
 
         if (addSearchBar) {
-            rootPanel.add(JTextField().apply {
+            rootPanel.add(SearchBar(searchBarHint, searchBarDescription).apply {
                 this.addActionListener {
                     if (allItems.isNotEmpty() && SearchableComponent::class.java in allItems.first()::class.java.interfaces) {
                         this@DPListTab.clear()
@@ -237,9 +236,6 @@ open class DPListTab<T : DPComponent>(title: String, addReloadButton: Boolean, a
                         redraw()
                     }
                 }
-
-                this.alignmentX = 0F
-                this.maximumSize = Dimension(this.maximumSize.width, this.preferredSize.height)
             })
         }
 
@@ -370,7 +366,7 @@ private fun dashboardTabProvider(data: List<DPData>): DPTab {
     content.add(studentHistoryContainer)
     content.add(assignmentSearchContainer)
 
-    val studentSearchField = JTextField().apply {
+    val studentSearchField = SearchBar("ex: Student, 22111333", "Searches for all submissions made by a student").apply {
         fun search() {
             State.client.searchStudents(this.text) {
                 SwingUtilities.invokeLater {
@@ -401,26 +397,16 @@ private fun dashboardTabProvider(data: List<DPData>): DPTab {
         }
 
         this.addActionListener { search() }
-        this.document.addDocumentListener(object : DocumentListener {
-            fun listener() {
-                if (document.length >= MIN_SEARCH_CHARACTERS) {
-                    search()
-                }
+        this.addDocumentListener { document ->
+            if (document.length >= MIN_SEARCH_CHARACTERS) {
+                search()
             }
+        }
 
-            override fun insertUpdate(e: DocumentEvent?) = listener()
-
-            override fun removeUpdate(e: DocumentEvent?) = listener()
-
-            override fun changedUpdate(e: DocumentEvent?) = listener()
-
-        })
-
-        this.maximumSize = Dimension(this.maximumSize.width, this.preferredSize.height)
-        this.alignmentX = 0F
+        this.alignmentY = Component.TOP_ALIGNMENT + 0.1f
     }
 
-    val assignmentSearchField = JTextField().apply {
+    val assignmentSearchField = SearchBar("ex: sampleJavaAssignment, tagName", "Searches for an assignment with matching name or tag").apply {
         this.addActionListener {
             State.client.searchAssignments(this.text) {
                 SwingUtilities.invokeLater {
@@ -452,12 +438,11 @@ private fun dashboardTabProvider(data: List<DPData>): DPTab {
             }
         }
 
-        this.maximumSize = Dimension(this.maximumSize.width, this.preferredSize.height)
-        this.alignmentX = 0F
+        this.alignmentY = Component.TOP_ALIGNMENT + 0.1f
     }
 
-    val studentHistoryLabel = JLabel("Student History: ")
-    val assignmentSearchLabel = JLabel("Assignments: ")
+    val studentHistoryLabel = JLabel("Student History: ").apply { alignmentY = Component.TOP_ALIGNMENT }
+    val assignmentSearchLabel = JLabel("Assignments: ").apply { alignmentY = Component.TOP_ALIGNMENT }
 
     maxOf(studentHistoryLabel.preferredSize.width, assignmentSearchLabel.preferredSize.width).run {
         studentHistoryLabel.preferredSize = Dimension(this, studentHistoryLabel.preferredSize.height)
@@ -572,7 +557,9 @@ private fun studentHistoryTabProvider(data: List<DPData>): DPListTab<SubmissionC
 
 @Suppress("UNCHECKED_CAST")
 private fun assignmentTabProvider(data: List<DPData>): DPListTab<AssignmentComponent> {
-    val root = DPListTab<AssignmentComponent>("Assignments", addReloadButton = false, addSearchBar = true)
+    val root = DPListTab<AssignmentComponent>("Assignments", addReloadButton = false, addSearchBar = true,
+                                              searchBarHint = "ex: sampleJavaAssignment, tagName",
+                                              searchBarDescription = "Searches for an assignment with matching name or tag")
 
     val assignments = data as List<Assignment>
 
@@ -615,7 +602,8 @@ private fun assignmentTabProvider(data: List<DPData>): DPListTab<AssignmentCompo
 
 @Suppress("UNCHECKED_CAST")
 fun groupSubmissionsTabProvider(data: List<DPData>): DPListTab<GroupSubmissionsComponent> {
-    val root = DPListTab<GroupSubmissionsComponent>("Submissions", addReloadButton = true, addSearchBar = true)
+    val root = DPListTab<GroupSubmissionsComponent>("Submissions", addReloadButton = true, addSearchBar = true,
+                                                    searchBarHint = "ex: Student, 22111333", searchBarDescription = "Searches for a matching student/group")
 
     var submissions = (data as List<AssignmentSubmissions>)[0].submissionsResponse
     var submissionsCache = submissions
@@ -692,7 +680,8 @@ fun groupSubmissionsTabProvider(data: List<DPData>): DPListTab<GroupSubmissionsC
 
 @Suppress("UNCHECKED_CAST")
 fun submissionsTabProvider(data: List<DPData>): DPListTab<SubmissionComponent> {
-    val root = DPListTab<SubmissionComponent>("Submissions", addReloadButton = true, addSearchBar = true)
+    val root = DPListTab<SubmissionComponent>("Submissions", addReloadButton = true, addSearchBar = true,
+                                              searchBarHint = "ex: 106", searchBarDescription = "Searches for a submission by ID")
 
     var submissions = (data as List<GroupSubmissions>)[0].allSubmissions
     var submissionsCache = submissions

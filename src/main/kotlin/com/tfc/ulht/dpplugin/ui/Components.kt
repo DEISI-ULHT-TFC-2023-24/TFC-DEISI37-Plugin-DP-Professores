@@ -2,18 +2,24 @@ package com.tfc.ulht.dpplugin.ui
 
 import com.intellij.icons.AllIcons
 import com.intellij.ui.JBColor
+import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.RowLayout
 import com.intellij.ui.dsl.builder.panel
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UI
 import com.tfc.ulht.dpplugin.dplib.*
 import java.awt.*
+import java.awt.event.ActionEvent
 import java.awt.event.MouseEvent
 import java.awt.event.MouseListener
 import java.awt.font.TextAttribute
 import java.time.format.DateTimeFormatter
 import javax.swing.*
 import javax.swing.Box.Filler
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
+import javax.swing.text.Document
 import javax.xml.datatype.DatatypeFactory
 
 class DashboardItemComponent(id: Int, text: String, icon: Icon?, listener: (Int) -> Unit) : JLabel(text, icon, LEFT) {
@@ -158,8 +164,8 @@ class StudentComponent(private val student: StudentListResponse) : DPComponent()
 }
 
 class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10), SearchableComponent {
-    val idLabel: JLabel
-    val submissionsLabel: JLabel
+    private val idLabel: JLabel
+    private val submissionsLabel: JLabel
 
     init {
         initCols(
@@ -189,7 +195,7 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10
         this.addComponent("ID", idHolder)
 
         assignment.dueDate?.let {
-            this.addComponent("Due", JLabel(it,))
+            this.addComponent("Due", JLabel(it))
         }
 
         this.addComponent("Sub. nº", JLabel(assignment.numSubmissions.toString()))
@@ -612,6 +618,35 @@ class BuildReportComponent(report: BuildReport) : DPComponent() {
 
         this.addComponent("Summary", JLabel(report.junitSummaryTeacher))
     }
+}
+
+class SearchBar(hint: String, description: String) : JComponent() {
+    private val searchBar = JBTextField().apply {
+        this.emptyText.text = hint
+        this.maximumSize = Dimension(this.maximumSize.width, this.preferredSize.height)
+    }
+
+    val text: String
+        get() = searchBar.text
+
+    init {
+        this.layout = BorderLayout()
+        this.alignmentX = 0F
+
+        val panel = UI.PanelFactory.panel(searchBar).withComment(description).createPanel()
+        this.add(panel)
+
+        this.maximumSize = Dimension(this.maximumSize.width, panel.preferredSize.height)
+    }
+
+    fun addActionListener(listener: (ActionEvent) -> Unit) = searchBar.addActionListener(listener)
+    fun addDocumentListener(listener: (Document) -> Unit) = searchBar.document.addDocumentListener(object : DocumentListener {
+        override fun insertUpdate(e: DocumentEvent?) = listener(searchBar.document)
+
+        override fun removeUpdate(e: DocumentEvent?) = listener(searchBar.document)
+
+        override fun changedUpdate(e: DocumentEvent?) = listener(searchBar.document)
+    })
 }
 
 class UIBuildReport {
