@@ -10,10 +10,11 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManagerListener
 import com.tfc.ulht.dpplugin.dplib.BASE_URL
+import org.jetbrains.concurrency.runAsync
 
 class ProjectListener : ProjectManagerListener {
     override fun projectOpened(project: Project) {
-        ApplicationManager.getApplication().invokeLater {
+        runAsync {
             val credentials = PasswordSafe.instance.get(CredentialAttributes("DP", "dp"))
 
             credentials?.userName?.let {
