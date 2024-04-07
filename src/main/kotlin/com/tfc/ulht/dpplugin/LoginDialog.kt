@@ -8,6 +8,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.tfc.ulht.dpplugin.dplib.BASE_URL
 import com.tfc.ulht.dpplugin.dplib.addSuffix
+import com.tfc.ulht.dpplugin.dplib.checkAndAddPrefix
 import okhttp3.Credentials
 import java.awt.Dimension
 import java.awt.event.ComponentEvent
@@ -35,11 +36,17 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
 
         loginButton.addActionListener {
             Credentials.basic(userField.text, tokenField.text).let { token ->
-                BASE_URL = instanceField.text.addSuffix("/").ifBlank { BASE_URL }
+                BASE_URL =
+                    instanceField.text
+                        .checkAndAddPrefix(listOf("http://", "https://"), "https://")
+                        .addSuffix("/")
+                        .ifBlank { BASE_URL }
+
                 State.client.login(token) { res ->
                     PasswordSafe.instance.set(
                         CredentialAttributes("DP", "dp"),
-                        com.intellij.credentialStore.Credentials(if (res) token else null, BASE_URL))
+                        com.intellij.credentialStore.Credentials(if (res) token else null, BASE_URL)
+                    )
 
                     resultLabel.text = "Login " + if (res) "successful" else "unsuccessful"
                     resultLabel.border = BorderFactory.createEmptyBorder(5, 0, 10, 0)
@@ -63,17 +70,17 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
             this.add(label)
             this.add(userField)
 
-            this.addComponentListener(object: ComponentListener {
+            this.addComponentListener(object : ComponentListener {
                 override fun componentResized(e: ComponentEvent?) {
                     e!!
                     e.component.size = Dimension(e.component.parent.width, e.component.height)
                 }
 
-                override fun componentMoved(e: ComponentEvent?) {  }
+                override fun componentMoved(e: ComponentEvent?) {}
 
-                override fun componentShown(e: ComponentEvent?) {  }
+                override fun componentShown(e: ComponentEvent?) {}
 
-                override fun componentHidden(e: ComponentEvent?) {  }
+                override fun componentHidden(e: ComponentEvent?) {}
 
             })
         })
