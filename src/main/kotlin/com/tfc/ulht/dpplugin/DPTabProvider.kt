@@ -8,6 +8,7 @@ import com.intellij.openapi.fileEditor.FileEditorProvider
 import com.intellij.openapi.fileEditor.FileEditorState
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
@@ -323,6 +324,22 @@ open class DPListTab<T : DPComponent>(title: String, addReloadButton: Boolean, a
     }
 }
 
+fun DPTab.startLoading(): Pair<JBLoadingPanel, Disposable> {
+    val disposable = Disposer.newDisposable()
+    val loadingPanel = JBLoadingPanel(null, disposable)
+
+    this.parent.parent.add(loadingPanel)
+
+    loadingPanel.startLoading()
+
+    return Pair(loadingPanel, disposable)
+}
+
+fun DPTab.stopLoading(loadingPanel: JBLoadingPanel, disposable: Disposable) {
+    Disposer.dispose(disposable)
+    this.parent.parent.remove(loadingPanel)
+}
+
 const val MIN_SEARCH_CHARACTERS = 3
 
 @Suppress("UNUSED_PARAMETER")
@@ -468,9 +485,7 @@ private fun dashboardTabProvider(data: List<DPData>): DPTab {
     buttonPanel.add(
         JButton("All assignments").apply {
             this.addActionListener {
-                val loadingPanel = JBLoadingPanel(null, Disposable { })
-                panel.add(loadingPanel)
-                loadingPanel.startLoading()
+                val loadingPanel = panel.startLoading()
 
                 State.client.getAssignments { assignments ->
                     if (assignments == null) {
@@ -481,13 +496,11 @@ private fun dashboardTabProvider(data: List<DPData>): DPTab {
                             JOptionPane.ERROR_MESSAGE
                         )
 
-                        loadingPanel.stopLoading()
-                        panel.remove(loadingPanel)
+                        panel.stopLoading(loadingPanel.component1(), loadingPanel.component2())
                     }
 
                     assignments?.let { data ->
-                        loadingPanel.stopLoading()
-                        panel.remove(loadingPanel)
+                        panel.stopLoading(loadingPanel.component1(), loadingPanel.component2())
                         panel.holder.data = data
                         panel.navigateForward((panel.holder.getTab(data.first().javaClass.name) as DPTab))
                     }
@@ -516,18 +529,15 @@ private fun studentHistoryTabProvider(data: List<DPData>): DPListTab<SubmissionC
         for (s in entry.sortedSubmissions) {
             root.addItem(SubmissionComponent(s).apply {
                 this.addBuildReportClickListener { _ ->
-                    val loadingPanel = JBLoadingPanel(null, Disposable { })
-                    root.add(loadingPanel)
+                    val loadingPanel = root.startLoading()
 
                     State.client.getBuildReport(s.id.toString()) { report ->
                         if (report == null) {
-                            loadingPanel.stopLoading()
-                            root.remove(loadingPanel)
+                            root.stopLoading(loadingPanel.component1(), loadingPanel.component2())
                         }
 
                         report?.let { data ->
-                            loadingPanel.stopLoading()
-                            root.remove(loadingPanel)
+                            root.stopLoading(loadingPanel.component1(), loadingPanel.component2())
                             root.holder.data = listOf(data)
                             root.navigateForward((root.holder.getTab(data.javaClass.name) as DPTab))
                         }
@@ -566,10 +576,7 @@ private fun assignmentTabProvider(data: List<DPData>): DPListTab<AssignmentCompo
     assignments.forEach { assignment ->
         root.addItem(AssignmentComponent(assignment).apply {
             this.addSubmissionClickListener {
-                val loadingPanel = JBLoadingPanel(null, Disposable { })
-                root.add(loadingPanel)
-
-                loadingPanel.startLoading()
+                val loadingPanel = root.startLoading()
 
                 State.client.getSubmissions(this.assignment.id) { subs ->
                     if (subs == null) {
@@ -580,13 +587,11 @@ private fun assignmentTabProvider(data: List<DPData>): DPListTab<AssignmentCompo
                             JOptionPane.ERROR_MESSAGE
                         )
 
-                        loadingPanel.stopLoading()
-                        root.remove(loadingPanel)
+                        root.stopLoading(loadingPanel.component1(), loadingPanel.component2())
                     }
 
                     subs?.let { data ->
-                        loadingPanel.stopLoading()
-                        root.remove(loadingPanel)
+                        root.stopLoading(loadingPanel.component1(), loadingPanel.component2())
                         root.holder.data = listOf(AssignmentSubmissions(assignment.id, data))
                         root.navigateForward((root.holder.getTab(AssignmentSubmissions::class.java.name) as DPTab))
                     }
@@ -624,12 +629,10 @@ fun groupSubmissionsTabProvider(data: List<DPData>): DPListTab<GroupSubmissionsC
         submissions.forEach {
             root.addItem(GroupSubmissionsComponent(it).apply {
                 this.addBuildReportClickListener { _ ->
-                    val loadingPanel = JBLoadingPanel(null, Disposable { })
-                    root.add(loadingPanel)
+                    val loadingPanel = root.startLoading()
 
                     State.client.getBuildReport(it.lastSubmission.id.toString()) { report ->
-                        loadingPanel.stopLoading()
-                        root.remove(loadingPanel)
+                        root.stopLoading(loadingPanel.component1(), loadingPanel.component2())
 
                         report?.let { data ->
                             root.holder.data = listOf(data)
@@ -641,12 +644,10 @@ fun groupSubmissionsTabProvider(data: List<DPData>): DPListTab<GroupSubmissionsC
                     SubmissionsAction.openSubmission(it.lastSubmission.id.toString())
                 }
                 this.addAllSubmissionsClickListener {
-                    val loadingPanel = JBLoadingPanel(null, Disposable { })
-                    root.add(loadingPanel)
+                    val loadingPanel = root.startLoading()
 
                     State.client.getGroupSubmissions(data[0].assignmentId, it.projectGroup.id) { subs ->
-                        loadingPanel.stopLoading()
-                        root.remove(loadingPanel)
+                        root.stopLoading(loadingPanel.component1(), loadingPanel.component2())
 
                         subs?.let { s ->
                             root.holder.data = listOf(GroupSubmissions(data[0].assignmentId, it.projectGroup.id, s))
@@ -704,18 +705,15 @@ fun submissionsTabProvider(data: List<DPData>): DPListTab<SubmissionComponent> {
         submissions.forEach {
             root.addItem(SubmissionComponent(it).apply {
                 this.addBuildReportClickListener { _ ->
-                    val loadingPanel = JBLoadingPanel(null, Disposable { })
-                    root.add(loadingPanel)
+                    val loadingPanel = root.startLoading()
 
                     State.client.getBuildReport(it.id.toString()) { report ->
                         if (report == null) {
-                            loadingPanel.stopLoading()
-                            root.remove(loadingPanel)
+                            root.stopLoading(loadingPanel.component1(), loadingPanel.component2())
                         }
 
                         report?.let { data ->
-                            loadingPanel.stopLoading()
-                            root.remove(loadingPanel)
+                            root.stopLoading(loadingPanel.component1(), loadingPanel.component2())
                             root.holder.data = listOf(data)
                             root.navigateForward((root.holder.getTab(data.javaClass.name) as DPTab))
                         }

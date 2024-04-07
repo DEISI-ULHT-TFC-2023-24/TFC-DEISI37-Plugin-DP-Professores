@@ -5,8 +5,6 @@ import com.intellij.ide.passwordSafe.PasswordSafe
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.ex.ActionUtil
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManagerListener
 import com.tfc.ulht.dpplugin.dplib.BASE_URL
@@ -32,9 +30,7 @@ class ProjectListener : ProjectManagerListener {
                     DataContext.EMPTY_CONTEXT,
                     ActionPlaces.UNKNOWN,
                     null
-                ) {
-                    Logger.getInstance(ProjectListener::class.java).debug("Action!")
-                }
+                ) {  }
             }
         }
     }
