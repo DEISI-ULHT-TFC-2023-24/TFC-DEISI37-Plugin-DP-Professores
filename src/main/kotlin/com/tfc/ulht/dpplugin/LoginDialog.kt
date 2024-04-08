@@ -15,7 +15,7 @@ import java.awt.event.ComponentEvent
 import java.awt.event.ComponentListener
 import javax.swing.*
 
-class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeModalityType.PROJECT, false) {
+class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeModalityType.IDE, false) {
     private val userField = JBTextField()
     private val tokenField = JBTextField()
     private val instanceField = JBTextField()
