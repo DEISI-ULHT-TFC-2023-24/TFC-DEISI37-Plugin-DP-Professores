@@ -702,7 +702,7 @@ fun submissionsTabProvider(data: List<DPData>): DPListTab<SubmissionComponent> {
     }
 
     val populateRoot = {
-        submissions.forEach {
+        submissions.sortedBy { -it.id }.forEach {
             root.addItem(SubmissionComponent(it).apply {
                 this.addBuildReportClickListener { _ ->
                     val loadingPanel = root.startLoading()
