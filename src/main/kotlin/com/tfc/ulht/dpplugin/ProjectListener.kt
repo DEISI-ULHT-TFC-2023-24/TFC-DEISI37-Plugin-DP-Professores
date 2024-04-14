@@ -17,9 +17,10 @@ class ProjectListener : ProjectManagerListener {
 
             credentials?.userName?.let {
                 credentials.password?.let {
-                    BASE_URL = credentials.password.toString()
+                    val value = it.toString().split(";")
+                    BASE_URL = value[1]
+                    State.client.login(value[0], null)
                 }
-                State.client.login(it, null)
             }
         }
 

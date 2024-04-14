@@ -45,7 +45,7 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
                 State.client.login(token) { res ->
                     PasswordSafe.instance.set(
                         CredentialAttributes("DP", "dp"),
-                        com.intellij.credentialStore.Credentials(if (res) token else null, BASE_URL)
+                        com.intellij.credentialStore.Credentials("dp", if (res) "$token;$BASE_URL" else BASE_URL)
                     )
 
                     resultLabel.text = "Login " + if (res) "successful" else "unsuccessful"
