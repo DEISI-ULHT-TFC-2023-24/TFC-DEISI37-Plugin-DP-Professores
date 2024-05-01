@@ -15,12 +15,10 @@ class ProjectListener : ProjectManagerListener {
         runAsync {
             val credentials = PasswordSafe.instance.get(CredentialAttributes("DP", "dp"))
 
-            credentials?.userName?.let {
-                credentials.password?.let {
-                    val value = it.toString().split(";")
-                    BASE_URL = value[1]
-                    State.client.login(value[0], null)
-                }
+            credentials?.password?.let {
+                val value = it.toString().split(";")
+                BASE_URL = value[1]
+                State.client.login(value[0], null)
             }
         }
 

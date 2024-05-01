@@ -27,6 +27,11 @@
     <extensions defaultExtensionNs="com.intellij">
         <fileEditorProvider
                 implementation="com.tfc.ulht.dpplugin.DPTabProvider"/>
+        <applicationService serviceImplementation="com.tfc.ulht.dpplugin.settings.ApplicationSettings" />
+        <applicationConfigurable
+                instance="com.tfc.ulht.dpplugin.settings.ApplicationConfigurable"
+                id="com.tfc.ulht.dpplugin.settings.ApplicationConfigurable"
+                displayName="DP Professores" />
     </extensions>
     
     <projectListeners>
