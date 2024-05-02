@@ -44,7 +44,8 @@ open class DPTab(addReloadButton: Boolean = false) :
 
     private val backButton: JButton
     private val forwardButton: JButton
-    private val homeButton: JButton
+    private val assignmentsButton: JButton
+    private val dashboardButton: JButton
     val reloadButton: JButton?
 
     var reloadFunction: (() -> Unit)? = null
@@ -78,9 +79,17 @@ open class DPTab(addReloadButton: Boolean = false) :
             }
         }
 
-        homeButton = JButton(AllIcons.Nodes.HomeFolder).apply {
+        assignmentsButton = JButton(AllIcons.Actions.Annotate).apply {
+            toolTipText = "Open the assignments menu"
             this.addActionListener {
-                navigateHome()
+                navigateToAssignments()
+            }
+        }
+
+        dashboardButton = JButton(AllIcons.Actions.GroupBy).apply {
+            toolTipText = "Open the dashboard"
+            this.addActionListener {
+                navigateToDashboard()
             }
         }
 
@@ -88,7 +97,8 @@ open class DPTab(addReloadButton: Boolean = false) :
 
         toolPanel.add(backButton)
         toolPanel.add(forwardButton)
-        toolPanel.add(homeButton)
+        toolPanel.add(assignmentsButton)
+        toolPanel.add(dashboardButton)
 
         rootPanel.add(toolPanel)
 
@@ -120,7 +130,6 @@ open class DPTab(addReloadButton: Boolean = false) :
     private fun updateNavButtons() {
         backButton.isEnabled = parent != null
         forwardButton.isEnabled = next != null
-        homeButton.isEnabled = parent != null
     }
 
     fun navigateForward(tab: DPTab) {
@@ -152,7 +161,7 @@ open class DPTab(addReloadButton: Boolean = false) :
         }
     }
 
-    private fun navigateHome() = parent?.let {
+    /* private fun navigateHome() = parent?.let {
         SwingUtilities.invokeLater {
             var parentTab = it
 
@@ -166,6 +175,35 @@ open class DPTab(addReloadButton: Boolean = false) :
 
             holder.panel.revalidate()
             holder.panel.repaint()
+        }
+    } */
+
+    private fun navigateToAssignments() {
+        val loadingPanel = startLoading()
+
+        State.client.getAssignments { assignments ->
+            if (assignments == null) {
+                JOptionPane.showMessageDialog(
+                    WindowManager.getInstance().findVisibleFrame(),
+                    "Couldn't load assignments.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE
+                )
+
+                stopLoading(loadingPanel.component1(), loadingPanel.component2())
+            }
+
+            assignments?.let { data ->
+                stopLoading(loadingPanel.component1(), loadingPanel.component2())
+                holder.data = data
+                navigateForward((holder.getTab(data.first().javaClass.name) as DPTab))
+            }
+        }
+    }
+
+    private fun navigateToDashboard() {
+        SwingUtilities.invokeLater {
+            navigateForward(holder.getTab(Null::class.java.name) as DPTab)
         }
     }
 
