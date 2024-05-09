@@ -696,7 +696,7 @@ class UIBuildReport {
                             "PS" -> {
                                 label("Project Structure")
                                 if (summary.reportValue == "OK") {
-                                    comment("<icon src='AllIcons.Actions.Commit'>&nbsp;")
+                                    comment("<icon src='AllIcons.General.InspectionsOK'>&nbsp;")
                                 } else {
                                     comment("<icon src='AllIcons.Actions.Suspend'>&nbsp;")
                                 }
@@ -705,7 +705,7 @@ class UIBuildReport {
                             "C" -> {
                                 label("Compilation")
                                 if (summary.reportValue == "OK") {
-                                    comment("<icon src='AllIcons.Actions.Commit'>&nbsp;")
+                                    comment("<icon src='AllIcons.General.InspectionsOK'>&nbsp;")
                                 } else {
                                     comment("<icon src='AllIcons.Actions.Suspend'>&nbsp;")
                                 }
@@ -714,7 +714,7 @@ class UIBuildReport {
                             "TT" -> {
                                 label("Teacher Unit Tests")
                                 if (summary.reportValue == "OK") {
-                                    comment("<icon src='AllIcons.Actions.Commit'>&nbsp;<b>${summary.reportProgress}/${summary.reportGoal}</b>")
+                                    comment("<icon src='AllIcons.General.InspectionsOK'>&nbsp;<b>${summary.reportProgress}/${summary.reportGoal}</b>")
                                 } else { //OK NOK ..?.. NULL??...CHECK THIS
                                     comment("<icon src='AllIcons.Actions.Suspend'>&nbsp;<b>${summary.reportProgress}/${summary.reportGoal}</b>")
                                 }
@@ -723,7 +723,7 @@ class UIBuildReport {
                             "CS" -> {
                                 label("Code Quality")
                                 if (summary.reportValue == "OK") {
-                                    comment("<icon src='AllIcons.Actions.Commit'>&nbsp;")
+                                    comment("<icon src='AllIcons.General.InspectionsOK'>&nbsp;")
                                 } else {
                                     comment("<icon src='AllIcons.Actions.Suspend'>&nbsp;")
                                 }
