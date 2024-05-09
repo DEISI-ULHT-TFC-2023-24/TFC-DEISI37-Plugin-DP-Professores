@@ -580,6 +580,31 @@ class SubmissionComponent(var submission: Submission) : DPComponent(padding = 10
         }
     }
 
+    fun unmarkFinal() {
+        if (idHolder.components.size > 1)
+            idHolder.remove(idHolder.components.last())
+
+        this.submission = Submission(
+            submission.id,
+            submission.statusDate,
+            submission.status,
+            submission.statusDate,
+            submission.testResults,
+            submission.teacherTests,
+            submission.studentTests,
+            submission.hiddenTests,
+            false,
+            submission.group
+        )
+
+        this.markAsFinalLabel.apply {
+            this.foreground = JBColor.BLUE
+
+            @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
+            this.cursor = null
+        }
+    }
+
     override fun match(queries: List<String>): Boolean {
         if (queries.isEmpty()) return false
 

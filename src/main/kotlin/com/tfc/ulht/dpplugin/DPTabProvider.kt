@@ -772,8 +772,13 @@ fun submissionsTabProvider(data: List<DPData>): DPListTab<SubmissionComponent> {
             override fun actionPerformed(e: ActionEvent?) {
                 root.getItems().firstOrNull()?.let { item ->
                     State.client.markAsFinal(item.submission.id) {
-                        if (it == true)
+                        if (it == true) {
+                            root.getItems().forEach { i -> i.unmarkFinal() }
                             item.markedAsFinal()
+
+                            root.revalidate()
+                            root.repaint()
+                        }
                     }
                 }
             }
@@ -795,8 +800,13 @@ fun submissionsTabProvider(data: List<DPData>): DPListTab<SubmissionComponent> {
                 }
 
                 State.client.markAsFinal(top.submission.id) {
-                    if (it == true)
+                    if (it == true) {
+                        root.getItems().forEach { i -> i.unmarkFinal() }
                         top.markedAsFinal()
+
+                        root.revalidate()
+                        root.repaint()
+                    }
                 }
             }
         }
