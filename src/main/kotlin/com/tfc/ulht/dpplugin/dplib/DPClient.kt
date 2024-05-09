@@ -432,7 +432,7 @@ class DPClient {
         })
     }
 
-    fun markAsFinal(submissionId: String, callback: ((Boolean?) -> Unit)) {
+    fun markAsFinal(submissionId: Int, callback: ((Boolean?) -> Unit)) {
         if (!loggedIn) {
             callback(null)
             return

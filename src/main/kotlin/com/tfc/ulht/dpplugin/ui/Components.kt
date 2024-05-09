@@ -20,7 +20,6 @@ import javax.swing.Box.Filler
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.text.Document
-import javax.xml.datatype.DatatypeFactory
 
 class DashboardItemComponent(id: Int, text: String, icon: Icon?, listener: (Int) -> Unit) : JLabel(text, icon, LEFT) {
     init {
@@ -462,8 +461,7 @@ class SubmissionComponent(var submission: Submission) : DPComponent(padding = 10
             )
         )
 
-        val date = DatatypeFactory.newInstance().newXMLGregorianCalendar(submission.submissionDate)
-            .toGregorianCalendar().toZonedDateTime()
+        val date = submission.getParsedDate()
 
         idLabel = CustomLabel("${submission.id}: ${date.format(DateTimeFormatter.ofPattern("dd/LLL HH:mm"))}")
         idHolder.add(idLabel)

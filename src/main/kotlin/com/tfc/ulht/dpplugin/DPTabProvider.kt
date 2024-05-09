@@ -22,6 +22,7 @@ import com.tfc.ulht.dpplugin.ui.*
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Graphics
+import java.awt.event.ActionEvent
 import java.beans.PropertyChangeListener
 import javax.swing.*
 
@@ -41,6 +42,8 @@ open class DPTab(addReloadButton: Boolean = false) :
     lateinit var holder: DPTabHolder
     private var parent: DPTab? = null
     var next: DPTab? = null
+
+    protected val toolPanel: JPanel
 
     private val backButton: JButton
     private val forwardButton: JButton
@@ -62,7 +65,7 @@ open class DPTab(addReloadButton: Boolean = false) :
 
         this.setViewportView(rootPanel)
 
-        val toolPanel = JPanel().apply {
+        toolPanel = JPanel().apply {
             this.layout = BoxLayout(this, BoxLayout.X_AXIS)
             this.alignmentX = 0F
         }
@@ -226,9 +229,13 @@ open class DPTab(addReloadButton: Boolean = false) :
         }.start()
 }
 
-open class DPListTab<T : DPComponent>(title: String, addReloadButton: Boolean, addSearchBar: Boolean = false,
-                                      searchBarHint: String = "", searchBarDescription: String = "") :
+open class DPListTab<T : DPComponent>(
+    title: String, addReloadButton: Boolean, addSearchBar: Boolean = false,
+    searchBarHint: String = "", searchBarDescription: String = ""
+) :
     DPTab(addReloadButton) {
+
+    constructor(title: String) : this(title, false)
 
     class HeaderComponent(cols: Set<String>) : DPComponent() {
         init {
@@ -252,8 +259,6 @@ open class DPListTab<T : DPComponent>(title: String, addReloadButton: Boolean, a
     private val colAssoc: MutableMap<String, MutableList<Component>> = mutableMapOf()
 
     private var header: HeaderComponent? = null
-
-    constructor(title: String) : this(title, false)
 
     init {
         rootPanel.border = JBUI.Borders.empty(0, 20)
@@ -280,6 +285,8 @@ open class DPListTab<T : DPComponent>(title: String, addReloadButton: Boolean, a
 
         rootPanel.add(itemsPanel)
     }
+
+    fun getItems(): List<T> = items.toList()
 
     fun redraw() {
         colAssoc.clear()
@@ -322,7 +329,8 @@ open class DPListTab<T : DPComponent>(title: String, addReloadButton: Boolean, a
             colStartPositions.putIfAbsent(it, 0)
 
             val colItems = colAssoc[it]!!
-            val value = colItems.maxOfOrNull { item -> item.preferredSize.width + (item.parent as DPComponent).padding } ?: 0
+            val value =
+                colItems.maxOfOrNull { item -> item.preferredSize.width + (item.parent as DPComponent).padding } ?: 0
 
             colStartPositions[cols.elementAt(i + 1)] = acc + value
             acc += value
@@ -380,6 +388,62 @@ fun DPTab.stopLoading(loadingPanel: JBLoadingPanel, disposable: Disposable) {
 
 const val MIN_SEARCH_CHARACTERS = 3
 
+class SubmissionsTab(
+    title: String, addReloadButton: Boolean, addSearchBar: Boolean = false,
+    searchBarHint: String = "", searchBarDescription: String = "",
+    addMarkFinalButton: Boolean = false
+) : DPListTab<SubmissionComponent>(title, addReloadButton, addSearchBar, searchBarHint, searchBarDescription) {
+
+    constructor(title: String) : this(title, false)
+
+    private val markAsFinalButton: DPOptionButton? =
+        if (addMarkFinalButton) DPOptionButton("Mark as Final...") else null
+
+    init {
+        if (addMarkFinalButton)
+            toolPanel.add(markAsFinalButton)
+    }
+
+    fun setMarkAsFinalButtonOptions(options: Array<Action>) {
+        markAsFinalButton?.options = options
+    }
+
+    fun setSubmissions(submissions: List<Submission>) {
+        submissions.forEach { s ->
+            addItem(SubmissionComponent(s).apply {
+                this.addBuildReportClickListener { _ ->
+                    val loadingPanel = startLoading()
+
+                    State.client.getBuildReport(s.id.toString()) { report ->
+                        if (report == null) {
+                            stopLoading(loadingPanel.component1(), loadingPanel.component2())
+                        }
+
+                        report?.let { data ->
+                            stopLoading(loadingPanel.component1(), loadingPanel.component2())
+                            holder.data = listOf(data)
+                            navigateForward((holder.getTab(data.javaClass.name) as DPTab))
+                        }
+                    }
+                }
+                this.addSubmissionDownloadClickListener {
+                    SubmissionsAction.openSubmission(this.submission.id.toString())
+                }
+                this.addMarkAsFinalClickListener {
+                    State.client.markAsFinal(this.submission.id) { result ->
+                        if (result == true) {
+                            this.markedAsFinal()
+
+                            this.revalidate()
+                            this.repaint()
+                        }
+                    }
+                }
+            })
+        }
+    }
+}
+
 @Suppress("UNUSED_PARAMETER")
 private fun dashboardTabProvider(data: List<DPData>): DPTab {
     val panel = DPTab().apply {
@@ -421,80 +485,82 @@ private fun dashboardTabProvider(data: List<DPData>): DPTab {
     content.add(studentHistoryContainer)
     content.add(assignmentSearchContainer)
 
-    val studentSearchField = SearchBar("ex: Student, 22111333", "Searches for all submissions made by a student").apply {
-        fun search() {
-            State.client.searchStudents(this.text) {
-                SwingUtilities.invokeLater {
-                    while (studentHistoryContainer.componentCount > 1) {
-                        studentHistoryContainer.remove(1)
-                    }
-
-                    studentHistoryContainer.revalidate()
-                    studentHistoryContainer.repaint()
-
-                    it?.forEach { student ->
-                        studentHistoryContainer.add(StudentComponent(student).apply {
-                            this.addOnClickListener { r ->
-                                State.client.getStudentHistory(r.value) { sh ->
-                                    sh?.let {
-                                        panel.holder.data = sh.history
-                                        panel.navigateForward(panel.holder.getTab(StudentHistoryEntry::class.java.name) as DPTab)
-                                    }
-                                }
-                            }
-                        })
+    val studentSearchField =
+        SearchBar("ex: Student, 22111333", "Searches for all submissions made by a student").apply {
+            fun search() {
+                State.client.searchStudents(this.text) {
+                    SwingUtilities.invokeLater {
+                        while (studentHistoryContainer.componentCount > 1) {
+                            studentHistoryContainer.remove(1)
+                        }
 
                         studentHistoryContainer.revalidate()
                         studentHistoryContainer.repaint()
-                    }
-                }
-            }
-        }
 
-        this.addActionListener { search() }
-        this.addDocumentListener { document ->
-            if (document.length >= MIN_SEARCH_CHARACTERS) {
-                search()
-            }
-        }
-
-        this.alignmentY = Component.TOP_ALIGNMENT + 0.1f
-    }
-
-    val assignmentSearchField = SearchBar("ex: sampleJavaAssignment, tagName", "Searches for an assignment with matching name or tag").apply {
-        this.addActionListener {
-            State.client.searchAssignments(this.text) {
-                SwingUtilities.invokeLater {
-                    while (assignmentSearchContainer.componentCount > 1) {
-                        assignmentSearchContainer.remove(1)
-                    }
-
-                    assignmentSearchContainer.revalidate()
-                    assignmentSearchContainer.repaint()
-
-                    it?.let {
-                        for (student in it) {
-                            assignmentSearchContainer.add(StudentComponent(student).apply {
+                        it?.forEach { student ->
+                            studentHistoryContainer.add(StudentComponent(student).apply {
                                 this.addOnClickListener { r ->
-                                    State.client.getSubmissions(r.value) { subs ->
-                                        subs?.let {
-                                            panel.holder.data = listOf(AssignmentSubmissions(r.value, subs))
-                                            panel.navigateForward(panel.holder.getTab(AssignmentSubmissions::class.java.name) as DPTab)
+                                    State.client.getStudentHistory(r.value) { sh ->
+                                        sh?.let {
+                                            panel.holder.data = sh.history
+                                            panel.navigateForward(panel.holder.getTab(StudentHistoryEntry::class.java.name) as DPTab)
                                         }
                                     }
                                 }
                             })
 
-                            assignmentSearchContainer.revalidate()
-                            assignmentSearchContainer.repaint()
+                            studentHistoryContainer.revalidate()
+                            studentHistoryContainer.repaint()
                         }
                     }
                 }
             }
+
+            this.addActionListener { search() }
+            this.addDocumentListener { document ->
+                if (document.length >= MIN_SEARCH_CHARACTERS) {
+                    search()
+                }
+            }
+
+            this.alignmentY = Component.TOP_ALIGNMENT + 0.1f
         }
 
-        this.alignmentY = Component.TOP_ALIGNMENT + 0.1f
-    }
+    val assignmentSearchField =
+        SearchBar("ex: sampleJavaAssignment, tagName", "Searches for an assignment with matching name or tag").apply {
+            this.addActionListener {
+                State.client.searchAssignments(this.text) {
+                    SwingUtilities.invokeLater {
+                        while (assignmentSearchContainer.componentCount > 1) {
+                            assignmentSearchContainer.remove(1)
+                        }
+
+                        assignmentSearchContainer.revalidate()
+                        assignmentSearchContainer.repaint()
+
+                        it?.let {
+                            for (student in it) {
+                                assignmentSearchContainer.add(StudentComponent(student).apply {
+                                    this.addOnClickListener { r ->
+                                        State.client.getSubmissions(r.value) { subs ->
+                                            subs?.let {
+                                                panel.holder.data = listOf(AssignmentSubmissions(r.value, subs))
+                                                panel.navigateForward(panel.holder.getTab(AssignmentSubmissions::class.java.name) as DPTab)
+                                            }
+                                        }
+                                    }
+                                })
+
+                                assignmentSearchContainer.revalidate()
+                                assignmentSearchContainer.repaint()
+                            }
+                        }
+                    }
+                }
+            }
+
+            this.alignmentY = Component.TOP_ALIGNMENT + 0.1f
+        }
 
     val studentHistoryLabel = JLabel("Student History: ").apply { alignmentY = Component.TOP_ALIGNMENT }
     val assignmentSearchLabel = JLabel("Assignments: ").apply { alignmentY = Component.TOP_ALIGNMENT }
@@ -557,45 +623,14 @@ private fun dashboardTabProvider(data: List<DPData>): DPTab {
 
 @Suppress("UNCHECKED_CAST")
 private fun studentHistoryTabProvider(data: List<DPData>): DPListTab<SubmissionComponent> {
-    val root = DPListTab<SubmissionComponent>("Student History")
+    val root = SubmissionsTab("Student History")
 
     val studentHistory = data as List<StudentHistoryEntry>
 
     studentHistory.forEach { entry ->
         root.itemsPanel.add(JLabel("<html><h2>${entry.assignment.name}: ${entry.sortedSubmissions[0].group?.authors?.joinToString { it.name }}</h2></html>"))
 
-        for (s in entry.sortedSubmissions) {
-            root.addItem(SubmissionComponent(s).apply {
-                this.addBuildReportClickListener { _ ->
-                    val loadingPanel = root.startLoading()
-
-                    State.client.getBuildReport(s.id.toString()) { report ->
-                        if (report == null) {
-                            root.stopLoading(loadingPanel.component1(), loadingPanel.component2())
-                        }
-
-                        report?.let { data ->
-                            root.stopLoading(loadingPanel.component1(), loadingPanel.component2())
-                            root.holder.data = listOf(data)
-                            root.navigateForward((root.holder.getTab(data.javaClass.name) as DPTab))
-                        }
-                    }
-                }
-                this.addSubmissionDownloadClickListener {
-                    SubmissionsAction.openSubmission(this.submission.id.toString())
-                }
-                this.addMarkAsFinalClickListener {
-                    State.client.markAsFinal(this.submission.id.toString()) { result ->
-                        if (result == true) {
-                            this.markedAsFinal()
-
-                            this.revalidate()
-                            this.repaint()
-                        }
-                    }
-                }
-            })
-        }
+        root.setSubmissions(entry.sortedSubmissions)
 
         root.redraw()
     }
@@ -605,9 +640,11 @@ private fun studentHistoryTabProvider(data: List<DPData>): DPListTab<SubmissionC
 
 @Suppress("UNCHECKED_CAST")
 private fun assignmentTabProvider(data: List<DPData>): DPListTab<AssignmentComponent> {
-    val root = DPListTab<AssignmentComponent>("Assignments", addReloadButton = false, addSearchBar = true,
-                                              searchBarHint = "ex: sampleJavaAssignment, tagName",
-                                              searchBarDescription = "Searches for an assignment with matching name or tag")
+    val root = DPListTab<AssignmentComponent>(
+        "Assignments", addReloadButton = false, addSearchBar = true,
+        searchBarHint = "ex: sampleJavaAssignment, tagName",
+        searchBarDescription = "Searches for an assignment with matching name or tag"
+    )
 
     val assignments = data as List<Assignment>
 
@@ -645,8 +682,10 @@ private fun assignmentTabProvider(data: List<DPData>): DPListTab<AssignmentCompo
 
 @Suppress("UNCHECKED_CAST")
 fun groupSubmissionsTabProvider(data: List<DPData>): DPListTab<GroupSubmissionsComponent> {
-    val root = DPListTab<GroupSubmissionsComponent>("Submissions", addReloadButton = true, addSearchBar = true,
-                                                    searchBarHint = "ex: Student, 22111333", searchBarDescription = "Searches for a matching student/group")
+    val root = DPListTab<GroupSubmissionsComponent>(
+        "Submissions", addReloadButton = true, addSearchBar = true,
+        searchBarHint = "ex: Student, 22111333", searchBarDescription = "Searches for a matching student/group"
+    )
 
     var submissions = (data as List<AssignmentSubmissions>)[0].submissionsResponse
     var submissionsCache = submissions
@@ -719,11 +758,49 @@ fun groupSubmissionsTabProvider(data: List<DPData>): DPListTab<GroupSubmissionsC
 
 @Suppress("UNCHECKED_CAST")
 fun submissionsTabProvider(data: List<DPData>): DPListTab<SubmissionComponent> {
-    val root = DPListTab<SubmissionComponent>("Submissions", addReloadButton = true, addSearchBar = true,
-                                              searchBarHint = "ex: 106", searchBarDescription = "Searches for a submission by ID")
+    val root = SubmissionsTab(
+        "Submissions", addReloadButton = true, addSearchBar = true,
+        searchBarHint = "ex: 106", searchBarDescription = "Searches for a submission by ID",
+        addMarkFinalButton = true
+    )
 
     var submissions = (data as List<GroupSubmissions>)[0].allSubmissions
     var submissionsCache = submissions
+
+    root.setMarkAsFinalButtonOptions(arrayOf(
+        object : AbstractAction("Mark latest") {
+            override fun actionPerformed(e: ActionEvent?) {
+                root.getItems().firstOrNull()?.let { item ->
+                    State.client.markAsFinal(item.submission.id) {
+                        if (it == true)
+                            item.markedAsFinal()
+                    }
+                }
+            }
+        },
+        object: AbstractAction("Mark highest score") {
+            override fun actionPerformed(e: ActionEvent?) {
+                fun getScore(submission: Submission) = submission.teacherTests?.let { it.numTests - it.numFailures - it.numErrors } ?: 0
+
+                val sorted = root.getItems().sortedByDescending { getScore(it.submission) }
+
+                val filtered = getScore(sorted.first().submission).let {
+                    topScore -> sorted.filter { getScore(it.submission) == topScore }
+                }
+
+                var top = filtered.first()
+
+                if (filtered.size > 1) {
+                    top = filtered.sortedByDescending { it.submission.getParsedDate() }.first()
+                }
+
+                State.client.markAsFinal(top.submission.id) {
+                    if (it == true)
+                        top.markedAsFinal()
+                }
+            }
+        }
+    ))
 
     root.reloadCheckFunction = {
         var ret = false
@@ -740,38 +817,7 @@ fun submissionsTabProvider(data: List<DPData>): DPListTab<SubmissionComponent> {
     }
 
     val populateRoot = {
-        submissions.sortedBy { -it.id }.forEach {
-            root.addItem(SubmissionComponent(it).apply {
-                this.addBuildReportClickListener { _ ->
-                    val loadingPanel = root.startLoading()
-
-                    State.client.getBuildReport(it.id.toString()) { report ->
-                        if (report == null) {
-                            root.stopLoading(loadingPanel.component1(), loadingPanel.component2())
-                        }
-
-                        report?.let { data ->
-                            root.stopLoading(loadingPanel.component1(), loadingPanel.component2())
-                            root.holder.data = listOf(data)
-                            root.navigateForward((root.holder.getTab(data.javaClass.name) as DPTab))
-                        }
-                    }
-                }
-                this.addSubmissionDownloadClickListener {
-                    SubmissionsAction.openSubmission(this.submission.id.toString())
-                }
-                this.addMarkAsFinalClickListener {
-                    State.client.markAsFinal(this.submission.id.toString()) { result ->
-                        if (result == true) {
-                            this.markedAsFinal()
-
-                            this.revalidate()
-                            this.repaint()
-                        }
-                    }
-                }
-            })
-        }
+        root.setSubmissions(submissions.sortedBy { -it.id })
 
         root.redraw()
     }

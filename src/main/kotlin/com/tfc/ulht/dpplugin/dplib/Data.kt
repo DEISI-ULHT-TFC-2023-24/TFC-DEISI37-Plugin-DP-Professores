@@ -1,6 +1,7 @@
 package com.tfc.ulht.dpplugin.dplib
 
 import kotlinx.serialization.Serializable
+import javax.xml.datatype.DatatypeFactory
 
 interface DPData
 
@@ -56,7 +57,10 @@ data class Submission(
     val hiddenTests: JUnitSummary? = null,
     val markedAsFinal: Boolean,
     val group: ProjectGroup? = null
-) : DPData
+) : DPData {
+    fun getParsedDate() = DatatypeFactory.newInstance().newXMLGregorianCalendar(submissionDate)
+        .toGregorianCalendar().toZonedDateTime()
+}
 
 @Serializable
 data class JUnitSummary(
