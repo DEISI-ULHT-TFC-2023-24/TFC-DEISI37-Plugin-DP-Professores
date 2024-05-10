@@ -43,7 +43,7 @@ open class DPTab(addReloadButton: Boolean = false) :
     private var parent: DPTab? = null
     var next: DPTab? = null
 
-    protected val toolPanel: JPanel
+    val toolPanel: JPanel
 
     private val backButton: JButton
     private val forwardButton: JButton
@@ -749,6 +749,34 @@ fun groupSubmissionsTabProvider(data: List<DPData>): DPListTab<GroupSubmissionsC
         root.reloadButton?.isEnabled = false
     }
 
+    root.toolPanel.add(DPOptionButton("Mark as Final...").apply {
+        this.options = arrayOf(
+            object : AbstractAction("Mark highest scores") {
+                override fun actionPerformed(e: ActionEvent?) {
+                    State.client.previewMarkBestSubmissions(data[0].assignmentId) {
+                        if (it?.isNotEmpty() == true) {
+                            State.client.markMultipleAsFinal(it.map { e -> e.id }) { res ->
+                                JOptionPane.showMessageDialog(
+                                    parent,
+                                    if (res == true) "Marked ${it.size} submissions as final" else "Couldn't mark any submissions as final",
+                                    "Mark highest score",
+                                    JOptionPane.INFORMATION_MESSAGE
+                                )
+                            }
+                        } else {
+                            JOptionPane.showMessageDialog(
+                                parent,
+                                "Couldn't mark any submissions as final",
+                                "Mark highest score",
+                                JOptionPane.INFORMATION_MESSAGE
+                            )
+                        }
+                    }
+                }
+            }
+        )
+    })
+
     populateRoot()
 
     root.startRefreshThread()
@@ -783,9 +811,10 @@ fun submissionsTabProvider(data: List<DPData>): DPListTab<SubmissionComponent> {
                 }
             }
         },
-        object: AbstractAction("Mark highest score") {
+        object : AbstractAction("Mark highest score") {
             override fun actionPerformed(e: ActionEvent?) {
-                fun getScore(submission: Submission) = submission.teacherTests?.let { it.numTests - it.numFailures - it.numErrors } ?: 0
+                fun getScore(submission: Submission) =
+                    submission.teacherTests?.let { it.numTests - it.numFailures - it.numErrors } ?: 0
 
                 val sorted = root.getItems().sortedByDescending { getScore(it.submission) }
 
@@ -858,17 +887,22 @@ fun buildReportTabProvider(data: List<DPData>): DPTab {
 
     val report = (data as List<FullBuildReport>).first()
 
-    /*root.addItem(DPComponent().apply {
-        
-    })*/
-
-    /*report.summary?.forEach {
-        root.addItem(SubmissionReportComponent(it))
-    }
-
-    report.buildReport?.let { root.addItem(BuildReportComponent(it)) }*/
-
     panel.rootPanel.add(UIBuildReport().buildComponents(report, null))
+
+    panel.toolPanel.add(JButton(object : AbstractAction("Mark as Final") {
+        override fun actionPerformed(e: ActionEvent?) {
+            (e?.source as JButton).isEnabled = false
+
+            report.submission?.let {
+                State.client.markAsFinal(it.id) { result ->
+                    if (result == false)
+                        (e.source as JButton).isEnabled = true
+                }
+            }
+        }
+    }).apply {
+        isEnabled = report.submission?.markedAsFinal?.not() ?: false
+    })
 
     return panel
 }

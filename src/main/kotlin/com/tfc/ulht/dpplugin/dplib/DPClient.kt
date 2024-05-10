@@ -1,7 +1,10 @@
 package com.tfc.ulht.dpplugin.dplib
 
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import java.io.InputStream
 import java.util.concurrent.TimeUnit
@@ -440,6 +443,77 @@ class DPClient {
 
         val request = Request.Builder()
             .url(BASE_URL + "api/teacher/submissions/$submissionId/markAsFinal")
+            .header("Authorization", authString!!)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                callback(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (!response.isSuccessful) {
+                    callback(null)
+                    response.close()
+                    return
+                }
+
+                try {
+                    callback(response.body!!.string() == "true")
+                    response.close()
+                } catch (_: Exception) {
+                    callback(null)
+                    response.close()
+                }
+            }
+        })
+    }
+
+    fun previewMarkBestSubmissions(assignmentId: String, callback: (List<Submission>?) -> Unit) {if (!loggedIn) {
+        callback(null)
+        return
+    }
+
+        val request = Request.Builder()
+            .url(BASE_URL + "api/teacher/assignments/$assignmentId/previewMarkBestSubmissions")
+            .header("Authorization", authString!!)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                callback(null)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (!response.isSuccessful) {
+                    callback(null)
+                    response.close()
+                    return
+                }
+
+                try {
+                    val submissions = json.decodeFromString<List<Submission>>(response.body!!.string())
+                    callback(submissions)
+                    response.close()
+                } catch (_: Exception) {
+                    callback(null)
+                    response.close()
+                }
+            }
+        })
+    }
+
+    fun markMultipleAsFinal(submissionIds: List<Int>, callback: ((Boolean?) -> Unit)) {
+        if (!loggedIn) {
+            callback(null)
+            return
+        }
+
+        val request = Request.Builder()
+            .url(BASE_URL + "api/teacher/markMultipleAsFinal")
+            .post(
+                Json.encodeToString(submissionIds).toRequestBody("application/json; charset=utf-8".toMediaTypeOrNull())
+            )
             .header("Authorization", authString!!)
             .build()
 
