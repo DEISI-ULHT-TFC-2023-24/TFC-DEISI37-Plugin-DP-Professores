@@ -1,12 +1,7 @@
 # Drop Project Teacher's plugin
 
-<p align="center">⚠️ <strong>WARNING</strong> ⚠️</p>
-
-<p align="center"><strong>THERE ARE STILL SOME CHANGES TO DP'S TEACHER API THAT HAVEN'T BEEN UPSTREAMED YET, SOME FEATURES MAY APPEAR BROKEN</strong></p>
-
 ## Broken features (on the official Drop Project build):
-- Submission counter always displays 0, although it's still functional
-- Viewing a student's last submission's build report or downloading it does not work
+- Marking multiple submissions as "final" from the assignment submissions tab 
 
 ## Requirements:
 - Access to a DP instance, preferably [self-hosted](https://github.com/joao-marques-a22108693/drop-project)
