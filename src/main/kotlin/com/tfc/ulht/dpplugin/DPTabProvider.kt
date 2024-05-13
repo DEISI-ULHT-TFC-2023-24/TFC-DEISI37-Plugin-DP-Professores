@@ -502,8 +502,8 @@ private fun dashboardTabProvider(data: List<DPData>): DPTab {
                                 this.addOnClickListener { r ->
                                     State.client.getStudentHistory(r.value) { sh ->
                                         sh?.let {
-                                            panel.holder.data = sh.history
-                                            panel.navigateForward(panel.holder.getTab(StudentHistoryEntry::class.java.name) as DPTab)
+                                            panel.holder.data = listOf(StudentHistoryPage.from(it.history))
+                                            panel.navigateForward(panel.holder.getTab(StudentHistoryPage::class.java.name) as DPTab)
                                         }
                                     }
                                 }
@@ -621,19 +621,97 @@ private fun dashboardTabProvider(data: List<DPData>): DPTab {
     return panel
 }
 
+data class StudentHistoryPage(
+    val previous: StudentHistoryPage?,
+    var next: StudentHistoryPage?,
+    val content: List<StudentHistoryEntry>
+): DPData {
+    companion object {
+        private const val MAX_ENTRIES = 50
+
+        fun from(list: List<StudentHistoryEntry>, previous: StudentHistoryPage? = null): StudentHistoryPage {
+            var count = 0
+            val content = mutableListOf<StudentHistoryEntry>()
+
+            for (entry in list) {
+                val entryCount = entry.sortedSubmissions.size
+
+                if (count + entryCount > MAX_ENTRIES) {
+                    val diff = count + entryCount - MAX_ENTRIES
+                    val newEntry = StudentHistoryEntry(entry.assignment, entry.sortedSubmissions.dropLast(diff))
+                    content.add(newEntry)
+
+                    val nextEntry = StudentHistoryEntry(entry.assignment, entry.sortedSubmissions.takeLast(diff))
+
+                    return StudentHistoryPage(previous, null, content).also {
+                        it.next = from(listOf(nextEntry) + list.drop(list.indexOf(entry) + 1), it)
+                    }
+                }
+
+                count += entryCount
+                content.add(entry)
+            }
+
+            return StudentHistoryPage(previous, null, content)
+        }
+    }
+}
+
 @Suppress("UNCHECKED_CAST")
 private fun studentHistoryTabProvider(data: List<DPData>): DPListTab<SubmissionComponent> {
     val root = SubmissionsTab("Student History")
+    lateinit var nextButton: JButton
+    lateinit var previousButton: JButton
 
-    val studentHistory = data as List<StudentHistoryEntry>
+    var page = (data as List<StudentHistoryPage>).first()
+    var currentGroup: Pair<Assignment, ProjectGroup?>?
 
-    studentHistory.forEach { entry ->
-        root.itemsPanel.add(JLabel("<html><h2>${entry.assignment.name}: ${entry.sortedSubmissions[0].group?.authors?.joinToString { it.name }}</h2></html>"))
+    fun refresh() {
+        root.clear()
+        currentGroup = null
 
-        root.setSubmissions(entry.sortedSubmissions)
+        page.content.forEach { entry ->
+            if (Pair(entry.assignment, entry.sortedSubmissions.first().group) != currentGroup) {
+                root.itemsPanel.add(JLabel("<html><h2>${entry.assignment.name}: ${entry.sortedSubmissions[0].group?.authors?.joinToString { it.name }}</h2></html>"))
+                currentGroup = Pair(entry.assignment, entry.sortedSubmissions.first().group)
+            }
 
-        root.redraw()
+            root.setSubmissions(entry.sortedSubmissions)
+
+            root.redraw()
+        }
+
+        previousButton.isEnabled = page.previous != null
+        nextButton.isEnabled = page.next != null
     }
+
+    val buttonPanel = JPanel().apply {
+        layout = BoxLayout(this@apply, BoxLayout.X_AXIS)
+        alignmentX = 0F
+    }
+
+    buttonPanel.add(Box.createHorizontalGlue())
+
+    previousButton = JButton(AllIcons.General.ArrowLeft).apply {
+        addActionListener {
+            page = page.previous ?: page
+            refresh()
+        }
+    }
+    nextButton = JButton(AllIcons.General.ArrowRight).apply {
+        addActionListener {
+            page = page.next ?: page
+            refresh()
+        }
+    }
+
+    buttonPanel.add(previousButton)
+    buttonPanel.add(nextButton)
+
+    buttonPanel.add(Box.createHorizontalGlue())
+    root.rootPanel.add(buttonPanel)
+
+    refresh()
 
     return root
 }
@@ -909,7 +987,7 @@ fun buildReportTabProvider(data: List<DPData>): DPTab {
 
 val tabProviders = mapOf<String, (List<DPData>) -> DPTab>(
     Pair(Null::class.java.name, ::dashboardTabProvider),
-    Pair(StudentHistoryEntry::class.java.name, ::studentHistoryTabProvider),
+    Pair(StudentHistoryPage::class.java.name, ::studentHistoryTabProvider),
     Pair(Assignment::class.java.name, ::assignmentTabProvider),
     Pair(AssignmentSubmissions::class.java.name, ::groupSubmissionsTabProvider),
     Pair(GroupSubmissions::class.java.name, ::submissionsTabProvider),
