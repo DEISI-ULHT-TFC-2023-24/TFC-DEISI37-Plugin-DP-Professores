@@ -627,7 +627,7 @@ data class StudentHistoryPage(
     val content: List<StudentHistoryEntry>
 ): DPData {
     companion object {
-        private const val MAX_ENTRIES = 20
+        private const val MAX_ENTRIES = 50
 
         fun from(list: List<StudentHistoryEntry>, previous: StudentHistoryPage? = null): StudentHistoryPage {
             var count = 0
