@@ -627,7 +627,7 @@ data class StudentHistoryPage(
     val content: List<StudentHistoryEntry>
 ): DPData {
     companion object {
-        private const val MAX_ENTRIES = 50
+        private const val MAX_ENTRIES = 20
 
         fun from(list: List<StudentHistoryEntry>, previous: StudentHistoryPage? = null): StudentHistoryPage {
             var count = 0
@@ -639,7 +639,9 @@ data class StudentHistoryPage(
                 if (count + entryCount > MAX_ENTRIES) {
                     val diff = count + entryCount - MAX_ENTRIES
                     val newEntry = StudentHistoryEntry(entry.assignment, entry.sortedSubmissions.dropLast(diff))
-                    content.add(newEntry)
+
+                    if (newEntry.sortedSubmissions.isNotEmpty())
+                        content.add(newEntry)
 
                     val nextEntry = StudentHistoryEntry(entry.assignment, entry.sortedSubmissions.takeLast(diff))
 
