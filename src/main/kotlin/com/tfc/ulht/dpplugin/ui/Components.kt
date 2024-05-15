@@ -482,7 +482,7 @@ class SubmissionComponent(var submission: Submission) : DPComponent(padding = 10
         idLabel = CustomLabel("${submission.id}: ${date.format(DateTimeFormatter.ofPattern("dd/LLL HH:mm"))}")
         idHolder.add(idLabel)
 
-        if (submission.markedAsFinal) idHolder.add(JLabel(AllIcons.Nodes.Function))
+        if (submission.markedAsFinal) idHolder.add(JLabel(ImageIcon(SubmissionComponent::class.java.getResource("/icons/final.png"))))
 
         this.addComponent("ID", idHolder)
 
@@ -573,7 +573,7 @@ class SubmissionComponent(var submission: Submission) : DPComponent(padding = 10
     })
 
     fun markedAsFinal() {
-        this.idHolder.add(JLabel(AllIcons.Nodes.Function))
+        this.idHolder.add(JLabel(ImageIcon(SubmissionComponent::class.java.getResource("/icons/final.png"))))
 
         this.submission = Submission(
             submission.id,
