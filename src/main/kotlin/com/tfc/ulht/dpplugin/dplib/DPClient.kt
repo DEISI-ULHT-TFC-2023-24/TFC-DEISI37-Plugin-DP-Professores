@@ -469,10 +469,11 @@ class DPClient {
         })
     }
 
-    fun previewMarkBestSubmissions(assignmentId: String, callback: (List<Submission>?) -> Unit) {if (!loggedIn) {
-        callback(null)
-        return
-    }
+    fun previewMarkBestSubmissions(assignmentId: String, callback: (List<Submission>?) -> Unit) {
+        if (!loggedIn) {
+            callback(null)
+            return
+        }
 
         val request = Request.Builder()
             .url(BASE_URL + "api/teacher/assignments/$assignmentId/previewMarkBestSubmissions")
