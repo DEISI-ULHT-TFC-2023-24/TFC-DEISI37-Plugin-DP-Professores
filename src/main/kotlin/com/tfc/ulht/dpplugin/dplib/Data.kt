@@ -12,7 +12,7 @@ data class Instructions(val body: String, val format: String) : DPData
 
 @Serializable
 data class Assignment(
-    val active: Boolean,
+    var active: Boolean,
     val dueDate: String?,
     val id: String,
     val instructions: Instructions?,

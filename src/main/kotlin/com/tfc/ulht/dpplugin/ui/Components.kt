@@ -8,6 +8,7 @@ import com.intellij.ui.dsl.builder.panel
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UI
+import com.tfc.ulht.dpplugin.State
 import com.tfc.ulht.dpplugin.dplib.*
 import java.awt.*
 import java.awt.event.ActionEvent
@@ -165,6 +166,7 @@ class StudentComponent(private val student: StudentListResponse) : DPComponent()
 class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10), SearchableComponent {
     private val idLabel: JLabel
     private val submissionsLabel: JLabel
+    private val activeCheckbox: JCheckBox
 
     init {
         initCols(
@@ -172,6 +174,7 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10
                 "ID",
                 "Due",
                 "Sub. nº",
+                "Active",
                 "Submissions"
             )
         )
@@ -189,8 +192,6 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10
         idLabel = CustomLabel(assignment.id)
         idHolder.add(idLabel)
 
-        if (!assignment.active) idHolder.add(JLabel(AllIcons.Vcs.Remove))
-
         this.addComponent("ID", idHolder)
 
         assignment.dueDate?.let {
@@ -198,6 +199,21 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10
         }
 
         this.addComponent("Sub. nº", JLabel(assignment.numSubmissions.toString()))
+
+        activeCheckbox = JCheckBox().apply {
+            isSelected = assignment.active
+            action = object : AbstractAction() {
+                override fun actionPerformed(e: ActionEvent?) {
+                    this@apply.isSelected = assignment.active
+
+                    State.client.toggleAssignmentState(assignment.id) {
+                        this@apply.isSelected = if (it == true) !assignment.active else assignment.active
+                        assignment.active = this@apply.isSelected
+                    }
+                }
+            }
+        }
+        this.addComponent("Active", activeCheckbox)
 
         submissionsLabel = JLabel("Submissions").apply {
             this.foreground = JBColor.BLUE
