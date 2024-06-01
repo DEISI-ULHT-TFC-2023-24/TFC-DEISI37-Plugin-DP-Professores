@@ -1,6 +1,5 @@
 package com.tfc.ulht.dpplugin.ui
 
-import com.intellij.icons.AllIcons
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.dsl.builder.RowLayout
@@ -35,21 +34,23 @@ class DashboardItemComponent(id: Int, text: String, icon: Icon?, listener: (Int)
         this.addMouseListener(object : MouseListener {
             override fun mouseClicked(e: MouseEvent?) = listener(id)
 
-            override fun mousePressed(e: MouseEvent?) {  }
+            override fun mousePressed(e: MouseEvent?) {}
 
-            override fun mouseReleased(e: MouseEvent?) {  }
+            override fun mouseReleased(e: MouseEvent?) {}
 
-            override fun mouseEntered(e: MouseEvent?) {  }
+            override fun mouseEntered(e: MouseEvent?) {}
 
-            override fun mouseExited(e: MouseEvent?) {  }
+            override fun mouseExited(e: MouseEvent?) {}
         })
     }
 }
 
 abstract class DPComponent(val padding: Int = 0) : JComponent() {
+
     private val cols = mutableSetOf<String>()
     private val endCols = mutableSetOf<String>()
     private val bindings = mutableMapOf<String, Component?>()
+    private val colSorters = mutableMapOf<String, Comparator<DPComponent>>()
 
     private var endFiller: Filler? = null
 
@@ -68,9 +69,14 @@ abstract class DPComponent(val padding: Int = 0) : JComponent() {
         endCols.addAll(cols)
     }
 
+    protected fun initColSorters(sorters: Map<String, Comparator<DPComponent>>) {
+        colSorters.putAll(sorters)
+    }
+
     fun getBindings(): Map<String, Component?> = bindings
     fun getCols(): Set<String> = cols
     fun getEndCols(): Set<String> = endCols
+    fun getColSorters(): Map<String, Comparator<DPComponent>> = colSorters
 
     protected fun addComponent(key: String, component: Component) {
         bindings.putIfAbsent(key, component)
@@ -138,9 +144,9 @@ class StudentComponent(private val student: StudentListResponse) : DPComponent()
         this.addMouseListener(object : MouseListener {
             override fun mouseClicked(e: MouseEvent?) = callback(student)
 
-            override fun mousePressed(e: MouseEvent?) {  }
+            override fun mousePressed(e: MouseEvent?) {}
 
-            override fun mouseReleased(e: MouseEvent?) {  }
+            override fun mouseReleased(e: MouseEvent?) {}
 
             override fun mouseEntered(e: MouseEvent?) {
                 this@StudentComponent.background = Color(53, 132, 228)
@@ -185,7 +191,19 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10
             )
         )
 
-        val idHolder = JPanel().apply {
+        @Suppress("UNCHECKED_CAST")
+        initColSorters(
+            mapOf(
+                Pair(
+                    "ID",
+                    Comparator<AssignmentComponent> { o1, o2 ->
+                        o1?.assignment?.id?.compareTo(o2?.assignment?.id ?: "") ?: 0
+                    } as Comparator<DPComponent>
+                )
+            )
+        )
+
+            val idHolder = JPanel ().apply {
             this.layout = BoxLayout(this, BoxLayout.X_AXIS)
         }
 
@@ -228,23 +246,26 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10
         this.addComponent("Submissions", submissionsLabel)
     }
 
-    fun addSubmissionClickListener(listener: (MouseEvent?) -> Unit) = submissionsLabel.addMouseListener(object : MouseListener {
-        override fun mouseClicked(e: MouseEvent?) = listener(e)
+    fun addSubmissionClickListener(listener: (MouseEvent?) -> Unit) =
+        submissionsLabel.addMouseListener(object : MouseListener {
+            override fun mouseClicked(e: MouseEvent?) = listener(e)
 
-        override fun mousePressed(e: MouseEvent?) {  }
+            override fun mousePressed(e: MouseEvent?) {}
 
-        override fun mouseReleased(e: MouseEvent?) {  }
+            override fun mouseReleased(e: MouseEvent?) {}
 
-        override fun mouseEntered(e: MouseEvent?) {  }
+            override fun mouseEntered(e: MouseEvent?) {}
 
-        override fun mouseExited(e: MouseEvent?) {  }
-    })
+            override fun mouseExited(e: MouseEvent?) {}
+        })
 
     override fun match(queries: List<String>): Boolean {
         if (queries.isEmpty()) return false
 
         for (query in queries) {
-            if (!assignment.id.lowercase().contains(query.lowercase()) && !assignment.name.lowercase().contains(query.lowercase())) {
+            if (!assignment.id.lowercase().contains(query.lowercase()) && !assignment.name.lowercase()
+                    .contains(query.lowercase())
+            ) {
                 return false
             }
         }
@@ -269,7 +290,8 @@ class TestResultsComponent(results: JUnitSummary?) : JLabel() {
     }
 }
 
-class GroupSubmissionsComponent(private val submissions: SubmissionsResponse) : DPComponent(padding = 10), SearchableComponent {
+class GroupSubmissionsComponent(private val submissions: SubmissionsResponse) : DPComponent(padding = 10),
+    SearchableComponent {
 
     private val idLabel: JLabel
     private val allSubmissions: NumberBox
@@ -288,13 +310,28 @@ class GroupSubmissionsComponent(private val submissions: SubmissionsResponse) : 
                 "Build Report",
                 "Download",
 
-            )
+                )
         )
 
         initEndCols(
             listOf(
                 "Build Report",
                 "Download"
+            )
+        )
+
+        @Suppress("UNCHECKED_CAST")
+        initColSorters(
+            mapOf(
+                Pair(
+                    "ID",
+                    Comparator<GroupSubmissionsComponent> { o1, o2 ->
+                        val id1 = (o1?.submissions?.projectGroup?.authors?.first()?.id ?: 0)
+                        val id2 = (o2?.submissions?.projectGroup?.authors?.first()?.id ?: 0)
+
+                        id1 - id2
+                    } as Comparator<DPComponent>
+                )
             )
         )
 
@@ -334,7 +371,7 @@ class GroupSubmissionsComponent(private val submissions: SubmissionsResponse) : 
 
             this.cursor = Cursor(Cursor.HAND_CURSOR)
         }
-        
+
         submissionDownloadLabel = JLabel("Download").apply {
             this.foreground = JBColor.BLUE
 
@@ -344,34 +381,36 @@ class GroupSubmissionsComponent(private val submissions: SubmissionsResponse) : 
 
             this.cursor = Cursor(Cursor.HAND_CURSOR)
         }
-        
+
         this.addComponent("Build Report", buildReportLabel)
         this.addComponent("Download", submissionDownloadLabel)
     }
 
-    fun addSubmissionDownloadClickListener(listener: (MouseEvent?) -> Unit) = submissionDownloadLabel.addMouseListener(object : MouseListener {
-        override fun mouseClicked(e: MouseEvent?) = listener(e)
+    fun addSubmissionDownloadClickListener(listener: (MouseEvent?) -> Unit) =
+        submissionDownloadLabel.addMouseListener(object : MouseListener {
+            override fun mouseClicked(e: MouseEvent?) = listener(e)
 
-        override fun mousePressed(e: MouseEvent?) {  }
+            override fun mousePressed(e: MouseEvent?) {}
 
-        override fun mouseReleased(e: MouseEvent?) {  }
+            override fun mouseReleased(e: MouseEvent?) {}
 
-        override fun mouseEntered(e: MouseEvent?) {  }
+            override fun mouseEntered(e: MouseEvent?) {}
 
-        override fun mouseExited(e: MouseEvent?) {  }
-    })
+            override fun mouseExited(e: MouseEvent?) {}
+        })
 
-    fun addBuildReportClickListener(listener: (MouseEvent?) -> Unit) = buildReportLabel.addMouseListener(object : MouseListener {
-        override fun mouseClicked(e: MouseEvent?) = listener(e)
+    fun addBuildReportClickListener(listener: (MouseEvent?) -> Unit) =
+        buildReportLabel.addMouseListener(object : MouseListener {
+            override fun mouseClicked(e: MouseEvent?) = listener(e)
 
-        override fun mousePressed(e: MouseEvent?) {  }
+            override fun mousePressed(e: MouseEvent?) {}
 
-        override fun mouseReleased(e: MouseEvent?) {  }
+            override fun mouseReleased(e: MouseEvent?) {}
 
-        override fun mouseEntered(e: MouseEvent?) {  }
+            override fun mouseEntered(e: MouseEvent?) {}
 
-        override fun mouseExited(e: MouseEvent?) {  }
-    })
+            override fun mouseExited(e: MouseEvent?) {}
+        })
 
     fun addAllSubmissionsClickListener(listener: () -> Unit) {
         allSubmissions.clickListener = listener
@@ -381,7 +420,9 @@ class GroupSubmissionsComponent(private val submissions: SubmissionsResponse) : 
         if (queries.isEmpty()) return false
 
         for (query in queries) {
-            if (submissions.projectGroup.authors.none { it.name.lowercase().contains(query.lowercase()) || it.id.toString().contains(query) }) {
+            if (submissions.projectGroup.authors.none {
+                    it.name.lowercase().contains(query.lowercase()) || it.id.toString().contains(query)
+                }) {
                 return false
             }
         }
@@ -403,6 +444,7 @@ class NumberBox(number: Int) : JComponent() {
             override fun mouseClicked(e: MouseEvent) {
                 clickListener?.invoke()
             }
+
             override fun mousePressed(e: MouseEvent) {}
             override fun mouseReleased(e: MouseEvent) {}
             override fun mouseEntered(e: MouseEvent) {
@@ -503,7 +545,6 @@ class SubmissionComponent(var submission: Submission) : DPComponent(padding = 10
             style[TextAttribute.UNDERLINE] = TextAttribute.UNDERLINE_ON
             this.font = this.font.deriveFont(style)
 
-            @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
             this.cursor = if (!submission.markedAsFinal) Cursor(Cursor.HAND_CURSOR) else null
         }
 
@@ -532,45 +573,48 @@ class SubmissionComponent(var submission: Submission) : DPComponent(padding = 10
         this.addComponent("Download", submissionDownloadLabel)
     }
 
-    fun addSubmissionDownloadClickListener(listener: (MouseEvent?) -> Unit) = submissionDownloadLabel.addMouseListener(object : MouseListener {
-        override fun mouseClicked(e: MouseEvent?) = listener(e)
+    fun addSubmissionDownloadClickListener(listener: (MouseEvent?) -> Unit) =
+        submissionDownloadLabel.addMouseListener(object : MouseListener {
+            override fun mouseClicked(e: MouseEvent?) = listener(e)
 
-        override fun mousePressed(e: MouseEvent?) {  }
+            override fun mousePressed(e: MouseEvent?) {}
 
-        override fun mouseReleased(e: MouseEvent?) {  }
+            override fun mouseReleased(e: MouseEvent?) {}
 
-        override fun mouseEntered(e: MouseEvent?) {  }
+            override fun mouseEntered(e: MouseEvent?) {}
 
-        override fun mouseExited(e: MouseEvent?) {  }
-    })
+            override fun mouseExited(e: MouseEvent?) {}
+        })
 
-    fun addMarkAsFinalClickListener(listener: (MouseEvent?) -> Unit) = markAsFinalLabel.addMouseListener(object : MouseListener {
-        override fun mouseClicked(e: MouseEvent?) {
-            if (!submission.markedAsFinal) {
-                listener(e)
+    fun addMarkAsFinalClickListener(listener: (MouseEvent?) -> Unit) =
+        markAsFinalLabel.addMouseListener(object : MouseListener {
+            override fun mouseClicked(e: MouseEvent?) {
+                if (!submission.markedAsFinal) {
+                    listener(e)
+                }
             }
-        }
 
-        override fun mousePressed(e: MouseEvent?) {  }
+            override fun mousePressed(e: MouseEvent?) {}
 
-        override fun mouseReleased(e: MouseEvent?) {  }
+            override fun mouseReleased(e: MouseEvent?) {}
 
-        override fun mouseEntered(e: MouseEvent?) {  }
+            override fun mouseEntered(e: MouseEvent?) {}
 
-        override fun mouseExited(e: MouseEvent?) {  }
-    })
+            override fun mouseExited(e: MouseEvent?) {}
+        })
 
-    fun addBuildReportClickListener(listener: (MouseEvent?) -> Unit) = buildReportLabel.addMouseListener(object : MouseListener {
-        override fun mouseClicked(e: MouseEvent?) = listener(e)
+    fun addBuildReportClickListener(listener: (MouseEvent?) -> Unit) =
+        buildReportLabel.addMouseListener(object : MouseListener {
+            override fun mouseClicked(e: MouseEvent?) = listener(e)
 
-        override fun mousePressed(e: MouseEvent?) {  }
+            override fun mousePressed(e: MouseEvent?) {}
 
-        override fun mouseReleased(e: MouseEvent?) {  }
+            override fun mouseReleased(e: MouseEvent?) {}
 
-        override fun mouseEntered(e: MouseEvent?) {  }
+            override fun mouseEntered(e: MouseEvent?) {}
 
-        override fun mouseExited(e: MouseEvent?) {  }
-    })
+            override fun mouseExited(e: MouseEvent?) {}
+        })
 
     fun markedAsFinal() {
         this.idHolder.add(JLabel(ImageIcon(SubmissionComponent::class.java.getResource("/icons/final.png"))))
@@ -591,7 +635,6 @@ class SubmissionComponent(var submission: Submission) : DPComponent(padding = 10
         this.markAsFinalLabel.apply {
             this.foreground = JBColor.DARK_GRAY
 
-            @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
             this.cursor = null
         }
     }
@@ -616,7 +659,6 @@ class SubmissionComponent(var submission: Submission) : DPComponent(padding = 10
         this.markAsFinalLabel.apply {
             this.foreground = JBColor.BLUE
 
-            @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
             this.cursor = null
         }
     }
@@ -679,13 +721,14 @@ class SearchBar(hint: String, description: String) : JComponent() {
     }
 
     fun addActionListener(listener: (ActionEvent) -> Unit) = searchBar.addActionListener(listener)
-    fun addDocumentListener(listener: (Document) -> Unit) = searchBar.document.addDocumentListener(object : DocumentListener {
-        override fun insertUpdate(e: DocumentEvent?) = listener(searchBar.document)
+    fun addDocumentListener(listener: (Document) -> Unit) =
+        searchBar.document.addDocumentListener(object : DocumentListener {
+            override fun insertUpdate(e: DocumentEvent?) = listener(searchBar.document)
 
-        override fun removeUpdate(e: DocumentEvent?) = listener(searchBar.document)
+            override fun removeUpdate(e: DocumentEvent?) = listener(searchBar.document)
 
-        override fun changedUpdate(e: DocumentEvent?) = listener(searchBar.document)
-    })
+            override fun changedUpdate(e: DocumentEvent?) = listener(searchBar.document)
+        })
 }
 
 class UIBuildReport {

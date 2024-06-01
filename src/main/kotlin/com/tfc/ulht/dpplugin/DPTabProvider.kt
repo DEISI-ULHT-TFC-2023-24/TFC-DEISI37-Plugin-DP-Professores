@@ -23,6 +23,8 @@ import java.awt.Component
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.event.ActionEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.beans.PropertyChangeListener
 import javax.swing.*
 
@@ -235,13 +237,50 @@ open class DPListTab<T : DPComponent>(
 ) :
     DPTab(addReloadButton) {
 
-    class HeaderComponent(cols: Set<String>) : DPComponent() {
+    enum class ColSortState {
+        ASC,
+        DESC,
+        NONE
+    }
+
+    class HeaderComponent(
+        cols: Set<String>,
+        sortableCols: Set<String> = setOf(),
+        sortedColState: Pair<String, ColSortState>? = null,
+        sortListener: ((String, ColSortState) -> Unit)? = null,
+    ) : DPComponent() {
+
         init {
             initCols(cols.toList())
 
             cols.forEach {
                 this.addComponent(it, JLabel(it).apply {
                     font = JBFont.regular().asBold()
+
+                    if (sortedColState?.first == it) {
+                        icon = when (sortedColState.second) {
+                            ColSortState.ASC -> AllIcons.Actions.MoveUp
+                            ColSortState.DESC -> AllIcons.Actions.MoveDown
+                            ColSortState.NONE -> null
+                        }
+                    }
+
+                    if (sortableCols.contains(it)) {
+                        addMouseListener(object : MouseAdapter() {
+                            override fun mouseClicked(e: MouseEvent?) {
+                                super.mouseClicked(e)
+
+                                sortListener?.let { fn ->
+                                    fn(
+                                        it,
+                                        if (sortedColState?.first == it &&
+                                            sortedColState.second == ColSortState.ASC
+                                        ) ColSortState.DESC else ColSortState.ASC
+                                    )
+                                }
+                            }
+                        })
+                    }
                 })
             }
         }
@@ -255,6 +294,7 @@ open class DPListTab<T : DPComponent>(
     }
 
     private val colAssoc: MutableMap<String, MutableList<Component>> = mutableMapOf()
+    private var currentColSortState: Pair<String, ColSortState>? = null
 
     private var header: HeaderComponent? = null
 
@@ -310,8 +350,31 @@ open class DPListTab<T : DPComponent>(
         val colStartPositions = mutableMapOf<String, Int>()
         val cols = items.firstOrNull()?.getCols() ?: return
         val endCols = items.first().getEndCols()
+        val colSorters = items.first().getColSorters()
 
-        header = HeaderComponent(cols.filter { it !in endCols && colAssoc[it]?.isNotEmpty() == true }.toSet())
+        header = HeaderComponent(
+            cols.filter { it !in endCols && colAssoc[it]?.isNotEmpty() == true }.toSet(),
+            colSorters.keys,
+            currentColSortState
+        ) { col, state ->
+            val sortedItems = items.sortedWith(colSorters[col]!!).toMutableList()
+
+            currentColSortState = Pair(col, state)
+
+            if (state == ColSortState.ASC) {
+                sortedItems.reverse()
+            }
+
+            SwingUtilities.invokeLater {
+                this.clear()
+
+                sortedItems.forEach { item ->
+                    this.addItem(item)
+                }
+
+                this.redraw()
+            }
+        }
 
         header!!.getBindings().forEach { (k, v) ->
             colAssoc[k]?.add(v!!)
@@ -623,7 +686,7 @@ data class StudentHistoryPage(
     val previous: StudentHistoryPage?,
     var next: StudentHistoryPage?,
     val content: List<StudentHistoryEntry>
-): DPData {
+) : DPData {
     companion object {
         private const val MAX_ENTRIES = 50
 
@@ -896,8 +959,8 @@ fun submissionsTabProvider(data: List<DPData>): DPListTab<SubmissionComponent> {
 
                 val sorted = root.getItems().sortedByDescending { getScore(it.submission) }
 
-                val filtered = getScore(sorted.first().submission).let {
-                    topScore -> sorted.filter { getScore(it.submission) == topScore }
+                val filtered = getScore(sorted.first().submission).let { topScore ->
+                    sorted.filter { getScore(it.submission) == topScore }
                 }
 
                 var top = filtered.first()
