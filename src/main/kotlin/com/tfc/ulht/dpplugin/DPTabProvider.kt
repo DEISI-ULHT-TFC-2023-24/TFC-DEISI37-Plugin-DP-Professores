@@ -235,8 +235,6 @@ open class DPListTab<T : DPComponent>(
 ) :
     DPTab(addReloadButton) {
 
-    constructor(title: String) : this(title, false)
-
     class HeaderComponent(cols: Set<String>) : DPComponent() {
         init {
             initCols(cols.toList())
