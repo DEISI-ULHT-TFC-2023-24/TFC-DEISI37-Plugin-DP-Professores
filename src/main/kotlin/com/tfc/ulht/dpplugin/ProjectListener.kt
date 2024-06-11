@@ -17,8 +17,11 @@ class ProjectListener : ProjectManagerListener {
 
             credentials?.password?.let {
                 val value = it.toString().split(";")
-                BASE_URL = value[1]
-                State.client.login(value[0], null)
+
+                if (value.size == 2) {
+                    BASE_URL = value[1]
+                    State.client.login(value[0], null)
+                }
             }
         }
 

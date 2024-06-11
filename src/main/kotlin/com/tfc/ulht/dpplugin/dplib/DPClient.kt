@@ -59,7 +59,7 @@ class DPClient {
         }
     }
 
-    fun login(token: String, callback: ((Boolean) -> Unit)?) {
+    fun login(token: String, callback: ((Boolean, Response?) -> Unit)?) {
         loggingIn = true
 
         val request = Request.Builder()
@@ -70,20 +70,20 @@ class DPClient {
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 loggingIn = false
-                if (callback != null) callback(false)
+                if (callback != null) callback(false, null)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 loggingIn = false
                 authString = if (response.isSuccessful) token else null
 
-                if (callback != null) callback(response.isSuccessful)
+                if (callback != null) callback(response.isSuccessful, response)
                 response.close()
             }
         })
     }
 
-    fun login(username: String, token: String, callback: ((Boolean) -> Unit)?) {
+    fun login(username: String, token: String, callback: ((Boolean, Response?) -> Unit)?) {
         val credentials = Credentials.basic(username, token)
         login(credentials, callback)
     }

@@ -21,6 +21,7 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
     private val instanceField = JBTextField()
     private val loginButton = JButton("Login")
     private val resultLabel = JBLabel()
+    private val messageLabel = JBLabel()
 
     private var callback: (() -> Unit)? = null
 
@@ -42,14 +43,22 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
                         .addSuffix("/")
                         .ifBlank { BASE_URL }
 
-                State.client.login(token) { res ->
+                State.client.login(token) { result, response ->
                     PasswordSafe.instance.set(
                         CredentialAttributes("DP", "dp"),
-                        com.intellij.credentialStore.Credentials("dp", if (res) "$token;$BASE_URL" else BASE_URL)
+                        com.intellij.credentialStore.Credentials("dp", if (result) "$token;$BASE_URL" else BASE_URL)
                     )
 
-                    resultLabel.text = "Login " + if (res) "successful" else "unsuccessful"
-                    resultLabel.border = BorderFactory.createEmptyBorder(5, 0, 10, 0)
+                    resultLabel.text = "Login " + if (result) "successful" else "unsuccessful"
+                    if (!result) {
+                        val fullMessage =
+                            if (response != null) "${response.code} ${response.message}" else "Couldn't send request to server"
+
+                        messageLabel.text = fullMessage
+                    }
+
+                    resultLabel.border = BorderFactory.createEmptyBorder(5, 0, 0, 0)
+                    messageLabel.border = BorderFactory.createEmptyBorder(0, 0, 10, 0)
 
                     callback?.let { it() }
                 }
@@ -111,6 +120,7 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
             add(loginButton)
         })
         this.add(resultLabel)
+        this.add(messageLabel)
 
         val highestWidth = labels.map { it.preferredSize.width }.maxOf { it }
 
