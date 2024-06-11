@@ -5,6 +5,7 @@ import com.intellij.ide.passwordSafe.PasswordSafe
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBPasswordField
 import com.intellij.ui.components.JBTextField
 import com.tfc.ulht.dpplugin.dplib.BASE_URL
 import com.tfc.ulht.dpplugin.dplib.addSuffix
@@ -17,7 +18,7 @@ import javax.swing.*
 
 class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeModalityType.IDE, false) {
     private val userField = JBTextField()
-    private val tokenField = JBTextField()
+    private val tokenField = JBPasswordField()
     private val instanceField = JBTextField()
     private val loginButton = JButton("Login")
     private val resultLabel = JBLabel()
