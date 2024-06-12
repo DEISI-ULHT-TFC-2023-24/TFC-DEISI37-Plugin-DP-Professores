@@ -39,7 +39,7 @@
     </projectListeners>
 
     <actions>
-        <group id="dp-group" text="DP" popup="true">
+        <group id="dp-group" text="DP Teacher Plugin" popup="true">
             <add-to-group group-id="MainMenu" anchor="last"/>
             <action class="com.tfc.ulht.dpplugin.actions.LoginAction" id="dp.login" text="Login"/>
             <action class="com.tfc.ulht.dpplugin.actions.AssignmentsAction" id="dp.assignments" text="Assignments"/>
