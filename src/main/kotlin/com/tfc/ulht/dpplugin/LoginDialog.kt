@@ -31,7 +31,7 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
     }
 
     init {
-        this.setSize(250, 150)
+        this.setSize(325, 150)
 
         init()
         title = "DP - Login"
@@ -53,9 +53,11 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
                     resultLabel.text = "Login " + if (result) "successful" else "unsuccessful"
                     if (!result) {
                         val fullMessage =
-                            if (response != null) "${response.code} ${response.message}" else "Couldn't send request to server"
+                            response ?: "Couldn't send request to server"
 
                         messageLabel.text = fullMessage
+                    } else {
+                        messageLabel.text = "You can close this window now."
                     }
 
                     resultLabel.border = BorderFactory.createEmptyBorder(5, 0, 0, 0)
@@ -64,6 +66,8 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
                     callback?.let { it() }
                 }
             }
+
+            messageLabel.text = "Login in progress..."
         }
     }
 
