@@ -21,6 +21,20 @@ import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.text.Document
 
+fun <T : DPComponent> stringComparator(argsFun: (T) -> String?): Comparator<T> =
+    Comparator { arg1, arg2 ->
+        val strings = Pair(argsFun(arg1), argsFun(arg2))
+
+        strings.first?.compareTo(strings.second ?: "") ?: 0
+    }
+
+fun <T : DPComponent> intComparator(argsFun: (T) -> Int?): Comparator<T> =
+    Comparator { arg1, arg2 ->
+        val ints = Pair(argsFun(arg1), argsFun(arg2))
+
+        (ints.first ?: 0) - (ints.second ?: 0)
+    }
+
 class DashboardItemComponent(id: Int, text: String, icon: Icon?, listener: (Int) -> Unit) : JLabel(text, icon, LEFT) {
     init {
         this.foreground = JBColor.BLUE
@@ -196,14 +210,14 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10
             mapOf(
                 Pair(
                     "ID",
-                    Comparator<AssignmentComponent> { o1, o2 ->
-                        o1?.assignment?.id?.compareTo(o2?.assignment?.id ?: "") ?: 0
+                    stringComparator<AssignmentComponent> {
+                        it.assignment.id
                     } as Comparator<DPComponent>
                 )
             )
         )
 
-            val idHolder = JPanel ().apply {
+        val idHolder = JPanel().apply {
             this.layout = BoxLayout(this, BoxLayout.X_AXIS)
         }
 
@@ -325,11 +339,8 @@ class GroupSubmissionsComponent(private val submissions: SubmissionsResponse) : 
             mapOf(
                 Pair(
                     "ID",
-                    Comparator<GroupSubmissionsComponent> { o1, o2 ->
-                        val id1 = (o1?.submissions?.projectGroup?.authors?.first()?.id ?: 0)
-                        val id2 = (o2?.submissions?.projectGroup?.authors?.first()?.id ?: 0)
-
-                        id1 - id2
+                    intComparator<GroupSubmissionsComponent> {
+                        it.submissions.projectGroup.authors.first().id
                     } as Comparator<DPComponent>
                 )
             )

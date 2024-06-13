@@ -25,6 +25,7 @@ import java.awt.Graphics
 import java.awt.event.ActionEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.font.TextAttribute
 import java.beans.PropertyChangeListener
 import javax.swing.*
 
@@ -266,6 +267,15 @@ open class DPListTab<T : DPComponent>(
                     }
 
                     if (sortableCols.contains(it)) {
+                        font = font.deriveFont(
+                            font.attributes.plus(
+                                Pair(
+                                    TextAttribute.UNDERLINE,
+                                    TextAttribute.UNDERLINE_ON
+                                )
+                            )
+                        )
+
                         addMouseListener(object : MouseAdapter() {
                             override fun mouseClicked(e: MouseEvent?) {
                                 super.mouseClicked(e)
