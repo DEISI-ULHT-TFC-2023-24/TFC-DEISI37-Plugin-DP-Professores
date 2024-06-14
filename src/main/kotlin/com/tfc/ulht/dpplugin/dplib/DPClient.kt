@@ -1,5 +1,6 @@
 package com.tfc.ulht.dpplugin.dplib
 
+import com.intellij.openapi.diagnostic.Logger
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import okhttp3.*
@@ -34,6 +35,8 @@ class DPClient {
             .writeTimeout(TIMEOUT, TimeUnit.SECONDS)
             .build()
     }
+    
+    private val logger = Logger.getInstance(this::class.java)
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -45,15 +48,27 @@ class DPClient {
     var loggingIn: Boolean = false
         private set
 
+    private fun logRequestStart(requestName: String) = logger.warn("${requestName}: Making request...")
+    private fun logRequestSuccess(requestName: String) = logger.warn("${requestName}: done")
+    private fun logRequestError(requestName: String, response: Response) = logger.error("${requestName}: ${response.code}")
+    private fun logException(requestName: String, e: java.lang.Exception) = logger.error("${requestName}: ${e.message}")
 
     fun loginBlocking(token: String): Boolean {
         val request = Request.Builder()
             .url(BASE_URL + "api/teacher/assignments/current")
             .header("Authorization", token)
             .build()
+        
+        logRequestStart("loginBlocking")
 
         return client.newCall(request).execute().let { response ->
-            authString = if (response.isSuccessful) token else null
+            authString = if (response.isSuccessful) {
+                logRequestSuccess("loginBlocking")
+                token
+            } else {
+                logRequestError("loginBlocking", response)
+                null
+            }
 
             response.isSuccessful.also {
                 response.close()
@@ -69,17 +84,29 @@ class DPClient {
             .header("Authorization", token)
             .build()
 
+        logRequestStart("login")
+
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                logException("login", e)
                 loggingIn = false
                 if (callback != null) callback(false, if (e.message == "timeout") "Error: Timeout" else null)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 loggingIn = false
-                authString = if (response.isSuccessful) token else null
+                authString = if (response.isSuccessful) {
+                    logRequestSuccess("login")
+                    token
+                } else {
+                    logRequestError("login", response)
+                    null
+                }
 
-                if (callback != null) callback(response.isSuccessful, "${response.code} ${response.message}")
+                if (callback != null) {
+                    callback(response.isSuccessful, "${response.code} ${response.message}")
+                }
+
                 response.close()
             }
         })
@@ -98,12 +125,16 @@ class DPClient {
             .header("Authorization", authString!!)
             .build()
 
+        logRequestStart("getAssignmentsBlocking")
+
         return client.newCall(request).execute().let { response ->
             try {
                 val assignment = json.decodeFromString<List<Assignment>>(response.body!!.string())
+                logRequestSuccess("getAssignmentsBlocking")
                 response.close()
                 assignment
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                logException("getAssignmentsBlocking", e)
                 response.close()
                 null
             }
@@ -121,13 +152,17 @@ class DPClient {
             .header("Authorization", authString!!)
             .build()
 
+        logRequestStart("getAssignments")
+
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                logException("getAssignments", e)
                 callback(null)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
+                    logRequestError("getAssignments", response)
                     callback(null)
                     response.close()
                     return
@@ -135,9 +170,11 @@ class DPClient {
 
                 try {
                     val assignment = json.decodeFromString<List<Assignment>>(response.body!!.string())
+                    logRequestSuccess("getAssignments")
                     callback(assignment)
                     response.close()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logException("getAssignments", e)
                     callback(null)
                     response.close()
                 }
@@ -153,12 +190,16 @@ class DPClient {
             .header("Authorization", authString!!)
             .build()
 
+        logRequestStart("getSubmissionsBlocking")
+
         return client.newCall(request).execute().let { response ->
             try {
                 val submissions = json.decodeFromString<List<SubmissionsResponse>>(response.body!!.string())
+                logRequestSuccess("getSubmissionsBlocking")
                 response.close()
                 submissions
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                logException("getSubmissionsBlocking", e)
                 response.close()
                 null
             }
@@ -176,13 +217,17 @@ class DPClient {
             .header("Authorization", authString!!)
             .build()
 
+        logRequestStart("getSubmissions")
+
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                logException("getSubmissions", e)
                 callback(null)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
+                    logRequestError("getSubmissions", response)
                     callback(null)
                     response.close()
                     return
@@ -190,9 +235,11 @@ class DPClient {
 
                 try {
                     val submissions = json.decodeFromString<List<SubmissionsResponse>>(response.body!!.string())
+                    logRequestSuccess("getSubmissions")
                     callback(submissions)
                     response.close()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logException("getSubmissions", e)
                     callback(null)
                     response.close()
                 }
@@ -208,12 +255,16 @@ class DPClient {
             .header("Authorization", authString!!)
             .build()
 
+        logRequestStart("getGroupSubmissionsBlocking")
+
         return client.newCall(request).execute().let { response ->
             try {
                 val submissions = json.decodeFromString<List<Submission>>(response.body!!.string())
+                logRequestSuccess("getGroupSubmissionsBlocking")
                 response.close()
                 submissions
             } catch (e: Exception) {
+                logException("getGroupSubmissionsBlocking", e)
                 response.close()
                 null
             }
@@ -231,13 +282,17 @@ class DPClient {
             .header("Authorization", authString!!)
             .build()
 
+        logRequestStart("getGroupSubmissions")
+
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                logException("getGroupSubmissions", e)
                 callback(null)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
+                    logRequestError("getGroupSubmissions", response)
                     callback(null)
                     response.close()
                     return
@@ -245,9 +300,11 @@ class DPClient {
 
                 try {
                     val submissions = json.decodeFromString<List<Submission>>(response.body!!.string())
+                    logRequestSuccess("getGroupSubmissions")
                     callback(submissions)
                     response.close()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logException("getGroupSubmissions", e)
                     callback(null)
                     response.close()
                 }
@@ -283,14 +340,21 @@ class DPClient {
             .header("Authorization", authString!!)
             .build()
 
+        logRequestStart("downloadSubmission")
+
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                logException("downloadSubmission", e)
                 callback(null)
             }
 
             override fun onResponse(call: Call, response: Response) {
-                if (!response.isSuccessful) callback(null)
+                if (!response.isSuccessful) {
+                    logRequestError("downloadSubmission", response)
+                    callback(null)
+                }
 
+                logRequestSuccess("downloadSubmission")
                 callback(response.body?.byteStream())
                 response.close()
             }
@@ -308,8 +372,11 @@ class DPClient {
             .header("Authorization", authString!!)
             .build()
 
+        logRequestStart("getBuildReport")
+
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                logException("getBuildReport", e)
                 callback(null)
             }
 
@@ -322,9 +389,11 @@ class DPClient {
 
                 try {
                     val buildReport = json.decodeFromString<FullBuildReport>(response.body!!.string())
+                    logRequestSuccess("getBuildReport")
                     callback(buildReport)
                     response.close()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logException("getBuildReport", e)
                     callback(null)
                     response.close()
                 }
@@ -343,13 +412,17 @@ class DPClient {
             .header("Authorization", authString!!)
             .build()
 
+        logRequestStart("getStudentHistory")
+
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                logException("getStudentHistory", e)
                 callback(null)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
+                    logRequestError("getStudentHistory", response)
                     callback(null)
                     response.close()
                     return
@@ -357,9 +430,11 @@ class DPClient {
 
                 try {
                     val studentHistory = json.decodeFromString<StudentHistory>(response.body!!.string())
+                    logRequestSuccess("getStudentHistory")
                     callback(studentHistory)
                     response.close()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logException("getStudentHistory", e)
                     callback(null)
                     response.close()
                 }
@@ -378,13 +453,17 @@ class DPClient {
             .header("Authorization", authString!!)
             .build()
 
+        logRequestStart("searchStudents")
+
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                logException("searchStudents", e)
                 callback(null)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
+                    logRequestError("searchStudents", response)
                     callback(null)
                     response.close()
                     return
@@ -392,9 +471,11 @@ class DPClient {
 
                 try {
                     val studentHistory = json.decodeFromString<List<StudentListResponse>>(response.body!!.string())
+                    logRequestSuccess("searchStudents")
                     callback(studentHistory)
                     response.close()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logException("searchStudents", e)
                     callback(null)
                     response.close()
                 }
@@ -413,13 +494,17 @@ class DPClient {
             .header("Authorization", authString!!)
             .build()
 
+        logRequestStart("searchAssignments")
+
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                logException("searchAssignments", e)
                 callback(null)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
+                    logRequestError("searchAssignments", response)
                     callback(null)
                     response.close()
                     return
@@ -427,9 +512,11 @@ class DPClient {
 
                 try {
                     val assignments = json.decodeFromString<List<StudentListResponse>>(response.body!!.string())
+                    logRequestSuccess("searchAssignments")
                     callback(assignments)
                     response.close()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logException("searchAssignments", e)
                     callback(null)
                     response.close()
                 }
@@ -448,22 +535,29 @@ class DPClient {
             .header("Authorization", authString!!)
             .build()
 
+        logRequestStart("markAsFinal")
+
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                logException("markAsFinal", e)
                 callback(null)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
+                    logRequestError("markAsFinal", response)
                     callback(null)
                     response.close()
                     return
                 }
 
                 try {
-                    callback(response.body!!.string() == "true")
+                    val result = response.body!!.string()
+                    logRequestSuccess("markAsFinal")
+                    callback(result == "true")
                     response.close()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logException("markAsFinal", e)
                     callback(null)
                     response.close()
                 }
@@ -482,13 +576,17 @@ class DPClient {
             .header("Authorization", authString!!)
             .build()
 
+        logRequestStart("previewMarkBestSubmissions")
+
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                logException("previewMarkBestSubmissions", e)
                 callback(null)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
+                    logRequestError("previewMarkBestSubmissions", response)
                     callback(null)
                     response.close()
                     return
@@ -496,9 +594,11 @@ class DPClient {
 
                 try {
                     val submissions = json.decodeFromString<List<Submission>>(response.body!!.string())
+                    logRequestSuccess("previewMarkBestSubmissions")
                     callback(submissions)
                     response.close()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logException("previewMarkBestSubmissions", e)
                     callback(null)
                     response.close()
                 }
@@ -520,22 +620,29 @@ class DPClient {
             .header("Authorization", authString!!)
             .build()
 
+        logRequestStart("markMultipleAsFinal")
+
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                logException("markMultipleAsFinal", e)
                 callback(null)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
+                    logRequestError("markMultipleAsFinal", response)
                     callback(null)
                     response.close()
                     return
                 }
 
                 try {
-                    callback(response.body!!.string() == "true")
+                    val result = response.body!!.string()
+                    logRequestSuccess("markMultipleAsFinal")
+                    callback(result == "true")
                     response.close()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logException("markMultipleAsFinal", e)
                     callback(null)
                     response.close()
                 }
@@ -554,22 +661,29 @@ class DPClient {
             .header("Authorization", authString!!)
             .build()
 
+        logRequestStart("toggleAssignmentState")
+
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                logException("toggleAssignmentState", e)
                 callback(null)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
+                    logRequestError("toggleAssignmentState", response)
                     callback(null)
                     response.close()
                     return
                 }
 
                 try {
-                    callback(response.body!!.string() == "true")
+                    val result = response.body!!.string()
+                    logRequestSuccess("toggleAssignmentState")
+                    callback(result == "true")
                     response.close()
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    logException("toggleAssignmentState", e)
                     callback(null)
                     response.close()
                 }
