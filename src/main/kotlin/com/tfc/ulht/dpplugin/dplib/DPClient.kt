@@ -9,6 +9,8 @@ import java.io.IOException
 import java.io.InputStream
 import java.util.concurrent.TimeUnit
 
+const val TIMEOUT = 30L
+
 class DPClient {
     /* private val authenticator = object : Authenticator {
         var username: String? = null
@@ -27,9 +29,9 @@ class DPClient {
 
     companion object {
         private val client = OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(TIMEOUT, TimeUnit.SECONDS)
+            .readTimeout(TIMEOUT, TimeUnit.SECONDS)
+            .writeTimeout(TIMEOUT, TimeUnit.SECONDS)
             .build()
     }
 
