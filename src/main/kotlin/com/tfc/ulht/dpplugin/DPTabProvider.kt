@@ -14,7 +14,10 @@ import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.testFramework.LightVirtualFile
+import com.intellij.ui.JBIntSpinner
+import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLoadingPanel
+import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import com.tfc.ulht.dpplugin.dplib.*
@@ -234,7 +237,7 @@ open class DPTab(addReloadButton: Boolean = false) :
 
 open class DPListTab<T : DPComponent>(
     title: String, addReloadButton: Boolean, addSearchBar: Boolean = false,
-    searchBarHint: String = "", searchBarDescription: String = ""
+    private val addFilterSection: Boolean = false, searchBarHint: String = "", searchBarDescription: String = ""
 ) :
     DPTab(addReloadButton) {
 
@@ -308,6 +311,9 @@ open class DPListTab<T : DPComponent>(
 
     private var header: HeaderComponent? = null
 
+    private var filterSection: JPanel? = null
+    private lateinit var filterSectionLabel: JLabel
+
     init {
         rootPanel.border = JBUI.Borders.empty(0, 20)
 
@@ -332,6 +338,50 @@ open class DPListTab<T : DPComponent>(
         }
 
         rootPanel.add(itemsPanel)
+    }
+
+    private fun createFilterSection(filterableRows: Map<String, Pair<FilterType, (Any) -> Boolean>>) {
+        filterSection = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            alignmentX = 0.0f
+        }
+
+        filterSectionLabel = JLabel("Filters").apply {
+            icon = AllIcons.General.ChevronRight
+
+            addMouseListener(object : MouseAdapter() {
+                override fun mouseClicked(e: MouseEvent?) {
+                    val isExpanded = icon == AllIcons.General.ChevronDown
+
+                    icon = if (isExpanded) AllIcons.General.ChevronRight else AllIcons.General.ChevronDown
+
+                    filterSection!!.components.drop(1).forEach {
+                        it.isVisible = !isExpanded
+                    }
+
+                    filterSection!!.revalidate()
+                    filterSection!!.repaint()
+                }
+            })
+        }
+
+        filterSection!!.add(filterSectionLabel)
+
+        for (row in filterableRows.entries) {
+            val component = when (row.value.first) {
+                FilterType.NUMBER -> JBIntSpinner(0, 0, Int.MAX_VALUE)
+                FilterType.TEXT -> JBTextField()
+                FilterType.BOOLEAN -> JBCheckBox()
+            }.apply {
+                isVisible = false
+                alignmentX = 0.0f
+                maximumSize = Dimension(maximumSize.width, preferredSize.height)
+            }
+
+            filterSection!!.add(component)
+        }
+
+        rootPanel.add(filterSection, 2)
     }
 
     fun getItems(): List<T> = items.toList()
@@ -361,6 +411,9 @@ open class DPListTab<T : DPComponent>(
         val cols = items.firstOrNull()?.getCols() ?: return
         val endCols = items.first().getEndCols()
         val colSorters = items.first().getColSorters()
+
+        if (addFilterSection && filterSection == null)
+            createFilterSection(items.first().getColFilters())
 
         header = HeaderComponent(
             cols.filter { it !in endCols && colAssoc[it]?.isNotEmpty() == true }.toSet(),
@@ -461,9 +514,16 @@ const val MIN_SEARCH_CHARACTERS = 3
 
 class SubmissionsTab(
     title: String, addReloadButton: Boolean, addSearchBar: Boolean = false,
-    searchBarHint: String = "", searchBarDescription: String = "",
+    addFilterSection: Boolean = false, searchBarHint: String = "", searchBarDescription: String = "",
     addMarkFinalButton: Boolean = false
-) : DPListTab<SubmissionComponent>(title, addReloadButton, addSearchBar, searchBarHint, searchBarDescription) {
+) : DPListTab<SubmissionComponent>(
+    title,
+    addReloadButton,
+    addSearchBar,
+    addFilterSection,
+    searchBarHint,
+    searchBarDescription
+) {
 
     constructor(title: String) : this(title, false)
 
@@ -792,7 +852,7 @@ private fun studentHistoryTabProvider(data: List<DPData>): DPListTab<SubmissionC
 @Suppress("UNCHECKED_CAST")
 private fun assignmentTabProvider(data: List<DPData>): DPListTab<AssignmentComponent> {
     val root = DPListTab<AssignmentComponent>(
-        "Assignments", addReloadButton = false, addSearchBar = true,
+        "Assignments", addReloadButton = false, addSearchBar = true, addFilterSection = true,
         searchBarHint = "ex: sampleJavaAssignment, tagName",
         searchBarDescription = "Searches for an assignment with matching name or tag"
     )

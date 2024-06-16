@@ -21,6 +21,12 @@ import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.text.Document
 
+enum class FilterType {
+    NUMBER,
+    TEXT,
+    BOOLEAN,
+}
+
 fun <T : DPComponent> stringComparator(argsFun: (T) -> String?): Comparator<T> =
     Comparator { arg1, arg2 ->
         val strings = Pair(argsFun(arg1), argsFun(arg2))
@@ -65,6 +71,7 @@ abstract class DPComponent(val padding: Int = 0) : JComponent() {
     private val endCols = mutableSetOf<String>()
     private val bindings = mutableMapOf<String, Component?>()
     private val colSorters = mutableMapOf<String, Comparator<DPComponent>>()
+    private val colFilters = mutableMapOf<String, Pair<FilterType, (Any) -> Boolean>>()
 
     private var endFiller: Filler? = null
 
@@ -87,10 +94,15 @@ abstract class DPComponent(val padding: Int = 0) : JComponent() {
         colSorters.putAll(sorters)
     }
 
+    protected fun initColFilters(sorters: Map<String, Pair<FilterType, (Any) -> Boolean>>) {
+        colFilters.putAll(sorters)
+    }
+
     fun getBindings(): Map<String, Component?> = bindings
     fun getCols(): Set<String> = cols
     fun getEndCols(): Set<String> = endCols
     fun getColSorters(): Map<String, Comparator<DPComponent>> = colSorters
+    fun getColFilters(): Map<String, Pair<FilterType, (Any) -> Boolean>> = colFilters
 
     protected fun addComponent(key: String, component: Component) {
         bindings.putIfAbsent(key, component)
@@ -214,6 +226,12 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10
                         it.assignment.id
                     } as Comparator<DPComponent>
                 )
+            )
+        )
+
+        initColFilters(
+            mapOf(
+
             )
         )
 
