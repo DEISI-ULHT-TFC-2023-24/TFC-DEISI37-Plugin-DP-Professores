@@ -422,11 +422,13 @@ open class DPListTab<T : DPComponent>(
                 if (unfilteredItems.isEmpty())
                     unfilteredItems.addAll(items)
 
-                items.clear()
+                clear()
 
-                items.addAll(unfilteredItems.filter { item ->
+                unfilteredItems.filter { item ->
                     item.getColFilters().map { it.value.second(filterArgs[it.key]) }.all { it }
-                })
+                }.forEach {
+                    this@DPListTab.addItem(it)
+                }
 
                 redraw()
             }
