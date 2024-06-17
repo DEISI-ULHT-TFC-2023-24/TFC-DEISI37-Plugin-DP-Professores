@@ -14,6 +14,7 @@ import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.testFramework.LightVirtualFile
+import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.JBIntSpinner
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLoadingPanel
@@ -25,12 +26,11 @@ import com.tfc.ulht.dpplugin.ui.*
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Graphics
-import java.awt.event.ActionEvent
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
+import java.awt.event.*
 import java.awt.font.TextAttribute
 import java.beans.PropertyChangeListener
 import javax.swing.*
+import javax.swing.event.DocumentEvent
 
 class DPTabProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile): Boolean = file is com.tfc.ulht.dpplugin.VirtualFile
@@ -301,6 +301,7 @@ open class DPListTab<T : DPComponent>(
 
     private val allItems: MutableList<T> = mutableListOf()
     private val items: MutableList<T> = mutableListOf()
+    private val unfilteredItems: MutableList<T> = mutableListOf()
     val itemsPanel: JPanel = JPanel().apply {
         this.layout = BoxLayout(this, BoxLayout.Y_AXIS)
         this.border = JBUI.Borders.empty(0, 10)
@@ -313,6 +314,7 @@ open class DPListTab<T : DPComponent>(
 
     private var filterSection: JPanel? = null
     private lateinit var filterSectionLabel: JLabel
+    private val filterArgs: MutableMap<String, Any?> = mutableMapOf()
 
     init {
         rootPanel.border = JBUI.Borders.empty(0, 20)
@@ -340,7 +342,9 @@ open class DPListTab<T : DPComponent>(
         rootPanel.add(itemsPanel)
     }
 
-    private fun createFilterSection(filterableRows: Map<String, Pair<FilterType, (Any) -> Boolean>>) {
+    private fun createFilterSection(filterableRows: Map<String, Pair<FilterType, (Any?) -> Boolean>>) {
+
+
         filterSection = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             alignmentX = 0.0f
@@ -368,18 +372,67 @@ open class DPListTab<T : DPComponent>(
         filterSection!!.add(filterSectionLabel)
 
         for (row in filterableRows.entries) {
-            val component = when (row.value.first) {
-                FilterType.NUMBER -> JBIntSpinner(0, 0, Int.MAX_VALUE)
-                FilterType.TEXT -> JBTextField()
-                FilterType.BOOLEAN -> JBCheckBox()
-            }.apply {
+            val panel = JPanel().apply {
+                layout = BoxLayout(this, BoxLayout.X_AXIS)
                 isVisible = false
                 alignmentX = 0.0f
-                maximumSize = Dimension(maximumSize.width, preferredSize.height)
             }
 
-            filterSection!!.add(component)
+            panel.add(JLabel(row.key + ": "))
+
+            val component = when (row.value.first) {
+                FilterType.NUMBER -> JBIntSpinner(0, 0, Int.MAX_VALUE).apply {
+                    addChangeListener {
+                        filterArgs[row.key] = number
+                    }
+                }
+                FilterType.TEXT -> JBTextField().apply {
+                    this.document.addDocumentListener(object : DocumentAdapter() {
+                        override fun textChanged(e: DocumentEvent) {
+                            filterArgs[row.key] = this@apply.text
+                        }
+
+                    })
+                }
+                FilterType.BOOLEAN -> JBCheckBox().apply {
+                    addItemListener {
+                        filterArgs[row.key] = when (it.stateChange) {
+                            ItemEvent.SELECTED -> true
+                            ItemEvent.DESELECTED -> false
+                            else -> filterArgs[row.key] ?: false
+                        }
+                    }
+                }
+            }.apply {
+                maximumSize = Dimension(maximumSize.width, preferredSize.height)
+                minimumSize = Dimension(preferredSize.width, preferredSize.height)
+            }
+
+            // panel.minimumSize = Dimension(panel.minimumSize.width, component.minimumSize.height)
+
+            panel.add(component)
+
+            filterSection!!.add(panel)
         }
+
+        val applyButton = JButton("Apply").apply {
+            isVisible = false
+
+            addActionListener {
+                if (unfilteredItems.isEmpty())
+                    unfilteredItems.addAll(items)
+
+                items.clear()
+
+                items.addAll(unfilteredItems.filter { item ->
+                    item.getColFilters().map { it.value.second(filterArgs[it.key]) }.all { it }
+                })
+
+                redraw()
+            }
+        }
+
+        filterSection!!.add(applyButton)
 
         rootPanel.add(filterSection, 2)
     }
