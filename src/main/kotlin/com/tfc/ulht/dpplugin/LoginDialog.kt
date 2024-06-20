@@ -34,7 +34,7 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
         this.setSize(325, 150)
 
         init()
-        title = "DP - Login"
+        title = "DP Teacher Plugin - Login"
 
         loginButton.addActionListener {
             Credentials.basic(userField.text, tokenField.text).let { token ->
