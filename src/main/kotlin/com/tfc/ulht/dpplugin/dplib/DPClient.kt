@@ -401,9 +401,9 @@ class DPClient {
         })
     }
 
-    fun getStudentHistory(studentId: String, callback: ((StudentHistory?) -> Unit)) {
+    fun getStudentHistory(studentId: String, callback: ((StudentHistory?, Boolean /* isException */) -> Unit)) {
         if (!loggedIn) {
-            callback(null)
+            callback(null, false)
             return
         }
 
@@ -417,13 +417,13 @@ class DPClient {
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 logException("getStudentHistory", e)
-                callback(null)
+                callback(null, true)
             }
 
             override fun onResponse(call: Call, response: Response) {
                 if (!response.isSuccessful) {
                     logRequestError("getStudentHistory", response)
-                    callback(null)
+                    callback(null, false)
                     response.close()
                     return
                 }
@@ -431,11 +431,11 @@ class DPClient {
                 try {
                     val studentHistory = json.decodeFromString<StudentHistory>(response.body!!.string())
                     logRequestSuccess("getStudentHistory")
-                    callback(studentHistory)
+                    callback(studentHistory, false)
                     response.close()
                 } catch (e: Exception) {
                     logException("getStudentHistory", e)
-                    callback(null)
+                    callback(null, false)
                     response.close()
                 }
             }

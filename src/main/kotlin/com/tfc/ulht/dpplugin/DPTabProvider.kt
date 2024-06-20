@@ -386,6 +386,7 @@ open class DPListTab<T : DPComponent>(
                         filterArgs[row.key] = number
                     }
                 }
+
                 FilterType.TEXT -> JBTextField().apply {
                     this.document.addDocumentListener(object : DocumentAdapter() {
                         override fun textChanged(e: DocumentEvent) {
@@ -394,6 +395,7 @@ open class DPListTab<T : DPComponent>(
 
                     })
                 }
+
                 FilterType.BOOLEAN -> JBCheckBox().apply {
                     addItemListener {
                         filterArgs[row.key] = when (it.stateChange) {
@@ -686,7 +688,15 @@ private fun dashboardTabProvider(data: List<DPData>): DPTab {
                         it?.forEach { student ->
                             studentHistoryContainer.add(StudentComponent(student).apply {
                                 this.addOnClickListener { r ->
-                                    State.client.getStudentHistory(r.value) { sh ->
+                                    State.client.getStudentHistory(r.value) { sh, isException ->
+                                        if (isException)
+                                            JOptionPane.showMessageDialog(
+                                                null,
+                                                "Couldn't get this student's history.\nFor more information, use the web UI.",
+                                                "Error",
+                                                JOptionPane.ERROR_MESSAGE
+                                            )
+
                                         sh?.let {
                                             panel.holder.data = listOf(StudentHistoryPage.from(it.history))
                                             panel.navigateForward(panel.holder.getTab(StudentHistoryPage::class.java.name) as DPTab)
