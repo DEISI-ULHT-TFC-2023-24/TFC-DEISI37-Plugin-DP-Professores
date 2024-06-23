@@ -1,9 +1,12 @@
 package com.tfc.ulht.dpplugin
 
 import com.intellij.credentialStore.CredentialAttributes
+import com.intellij.ide.BrowserUtil
 import com.intellij.ide.passwordSafe.PasswordSafe
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
+import com.intellij.ui.DocumentAdapter
+import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPasswordField
 import com.intellij.ui.components.JBTextField
@@ -15,11 +18,13 @@ import java.awt.Dimension
 import java.awt.event.ComponentEvent
 import java.awt.event.ComponentListener
 import javax.swing.*
+import javax.swing.event.DocumentEvent
 
 class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeModalityType.IDE, false) {
+    private val instanceField = JBTextField()
     private val userField = JBTextField()
     private val tokenField = JBPasswordField()
-    private val instanceField = JBTextField()
+    private val tokenUrlLink = ActionLink("Get token")
     private val loginButton = JButton("Login")
     private val resultLabel = JBLabel()
     private val messageLabel = JBLabel()
@@ -40,7 +45,7 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
             Credentials.basic(userField.text, tokenField.text).let { token ->
                 BASE_URL =
                     instanceField.text
-                        .checkAndAddPrefix(listOf("http://", "https://"), "https://")
+                        .checkAndAddPrefix(listOf("http://", "https://"), "http://")
                         .addSuffix("/")
                         .ifBlank { BASE_URL }
 
@@ -78,6 +83,23 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
         this.add(JPanel().apply {
             this.layout = BoxLayout(this, BoxLayout.X_AXIS)
 
+            JLabel("Server: ").also {
+                labels.add(it)
+                this.add(it)
+            }
+
+            instanceField.document.addDocumentListener(object : DocumentAdapter() {
+                override fun textChanged(e: DocumentEvent) {
+                    tokenUrlLink.model.isEnabled = e.document.length > 0
+                    tokenUrlLink.isVisible = true
+                }
+            })
+
+            this.add(instanceField)
+        })
+        this.add(JPanel().apply {
+            this.layout = BoxLayout(this, BoxLayout.X_AXIS)
+
             val label = JLabel("User: ")
             labels.add(label)
 
@@ -112,18 +134,29 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
         this.add(JPanel().apply {
             this.layout = BoxLayout(this, BoxLayout.X_AXIS)
 
-            JLabel("Server: ").also {
-                labels.add(it)
-                this.add(it)
-            }
+            this.add(tokenUrlLink.apply {
+                addActionListener {
+                    BrowserUtil.browse(
+                        instanceField.text
+                            .checkAndAddPrefix(listOf("http://", "https://"), "http://")
+                            .addSuffix("/") + "personalToken"
+                    )
+                }
 
-            this.add(instanceField)
+                model.isEnabled = false
+                isVisible = true
+
+                setExternalLinkIcon()
+            })
+
+            this.add(Box.createHorizontalGlue())
         })
         this.add(JPanel().apply {
             this.layout = BoxLayout(this, BoxLayout.X_AXIS)
             add(Box.createHorizontalGlue())
             add(loginButton)
         })
+
         this.add(resultLabel)
         this.add(messageLabel)
 
