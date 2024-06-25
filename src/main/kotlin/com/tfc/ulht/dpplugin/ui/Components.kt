@@ -67,11 +67,17 @@ class DashboardItemComponent(id: Int, text: String, icon: Icon?, listener: (Int)
 
 abstract class DPComponent(val padding: Int = 0) : JComponent() {
 
+    data class ColumnFilter(
+        val type: FilterType,
+        val hintText: String? = null,
+        val filterFunc: (Any?) -> Boolean
+    )
+
     private val cols = mutableSetOf<String>()
     private val endCols = mutableSetOf<String>()
     private val bindings = mutableMapOf<String, Component?>()
     private val colSorters = mutableMapOf<String, Comparator<DPComponent>>()
-    private val colFilters = mutableMapOf<String, Pair<FilterType, (Any?) -> Boolean>>()
+    private val colFilters = mutableMapOf<String, ColumnFilter>()
 
     private var endFiller: Filler? = null
 
@@ -94,7 +100,7 @@ abstract class DPComponent(val padding: Int = 0) : JComponent() {
         colSorters.putAll(sorters)
     }
 
-    protected fun initColFilters(sorters: Map<String, Pair<FilterType, (Any?) -> Boolean>>) {
+    protected fun initColFilters(sorters: Map<String, ColumnFilter>) {
         colFilters.putAll(sorters)
     }
 
@@ -102,7 +108,7 @@ abstract class DPComponent(val padding: Int = 0) : JComponent() {
     fun getCols(): Set<String> = cols
     fun getEndCols(): Set<String> = endCols
     fun getColSorters(): Map<String, Comparator<DPComponent>> = colSorters
-    fun getColFilters(): Map<String, Pair<FilterType, (Any?) -> Boolean>> = colFilters
+    fun getColFilters(): Map<String, ColumnFilter> = colFilters
 
     protected fun addComponent(key: String, component: Component) {
         bindings.putIfAbsent(key, component)
@@ -232,16 +238,24 @@ class AssignmentComponent(val assignment: Assignment) : DPComponent(padding = 10
         initColFilters(
             mapOf(
                 Pair(
-                    "ID",
-                    Pair(
-                        FilterType.TEXT
-                    ) { arg -> assignment.id.contains((arg as String?) ?: "") }
+                    "Title",
+                    ColumnFilter(
+                        FilterType.TEXT,
+                    ) { arg -> assignment.name.lowercase().contains((arg as String?)?.lowercase() ?: "") }
                 ),
                 Pair(
-                    "TestFilter",
-                    Pair(
-                        FilterType.BOOLEAN,
-                    ) { arg -> (arg as Boolean?) ?: true }
+                    "Tags",
+                    ColumnFilter(
+                        FilterType.TEXT,
+                        "Tag1,Tag2"
+                    ) { arg ->
+                        val tags = (arg as String?)
+                            ?.split(",")
+                            ?.map { it.trim() }
+                            ?.filter { it.isNotBlank() } ?: listOf()
+
+                        if (tags.isEmpty()) true else assignment.tagsStr.containsAll(tags)
+                    }
                 ),
             )
         )

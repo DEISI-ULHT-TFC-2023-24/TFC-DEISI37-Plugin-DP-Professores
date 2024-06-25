@@ -21,6 +21,7 @@ data class Assignment(
     val packageName: String,
     val submissionMethod: String,
     val numSubmissions: Int,
+    val tagsStr: List<String> = listOf(),
 ) : DPData
 
 @Serializable

@@ -342,8 +342,7 @@ open class DPListTab<T : DPComponent>(
         rootPanel.add(itemsPanel)
     }
 
-    private fun createFilterSection(filterableRows: Map<String, Pair<FilterType, (Any?) -> Boolean>>) {
-
+    private fun createFilterSection(filterableRows: Map<String, DPComponent.ColumnFilter>) {
 
         filterSection = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
@@ -380,7 +379,7 @@ open class DPListTab<T : DPComponent>(
 
             panel.add(JLabel(row.key + ": "))
 
-            val component = when (row.value.first) {
+            val component = when (row.value.type) {
                 FilterType.NUMBER -> JBIntSpinner(0, 0, Int.MAX_VALUE).apply {
                     addChangeListener {
                         filterArgs[row.key] = number
@@ -394,6 +393,8 @@ open class DPListTab<T : DPComponent>(
                         }
 
                     })
+
+                    this.emptyText.setText(row.value.hintText ?: "")
                 }
 
                 FilterType.BOOLEAN -> JBCheckBox().apply {
@@ -410,8 +411,6 @@ open class DPListTab<T : DPComponent>(
                 minimumSize = Dimension(preferredSize.width, preferredSize.height)
             }
 
-            // panel.minimumSize = Dimension(panel.minimumSize.width, component.minimumSize.height)
-
             panel.add(component)
 
             filterSection!!.add(panel)
@@ -427,7 +426,7 @@ open class DPListTab<T : DPComponent>(
                 clear()
 
                 unfilteredItems.filter { item ->
-                    item.getColFilters().map { it.value.second(filterArgs[it.key]) }.all { it }
+                    item.getColFilters().map { it.value.filterFunc(filterArgs[it.key]) }.all { it }
                 }.forEach {
                     this@DPListTab.addItem(it)
                 }
