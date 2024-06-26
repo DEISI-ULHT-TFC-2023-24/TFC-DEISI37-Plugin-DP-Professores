@@ -45,7 +45,10 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
             Credentials.basic(userField.text, tokenField.text).let { token ->
                 BASE_URL =
                     instanceField.text
-                        .checkAndAddPrefix(listOf("http://", "https://"), "http://")
+                        .checkAndAddPrefix(
+                            listOf("http://", "https://"),
+                            if (instanceField.text.contains(":") && !instanceField.text.contains("/")) "http://" else "https://"
+                        )
                         .addSuffix("/")
                         .ifBlank { BASE_URL }
 
@@ -138,7 +141,10 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
                 addActionListener {
                     BrowserUtil.browse(
                         instanceField.text
-                            .checkAndAddPrefix(listOf("http://", "https://"), "http://")
+                            .checkAndAddPrefix(
+                                listOf("http://", "https://"),
+                                if (instanceField.text.contains(":") && !instanceField.text.contains("/")) "http://" else "https://"
+                            )
                             .addSuffix("/") + "personalToken"
                     )
                 }
