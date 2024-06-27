@@ -828,10 +828,11 @@ data class StudentHistoryPage(
         private const val MAX_ENTRIES = 50
 
         fun from(list: List<StudentHistoryEntry>, previous: StudentHistoryPage? = null): StudentHistoryPage {
+            val sortedList =  list.sortedByDescending { it.sortedSubmissions.first().getParsedDate() }
             var count = 0
             val content = mutableListOf<StudentHistoryEntry>()
 
-            for (entry in list) {
+            for (entry in sortedList) {
                 val entryCount = entry.sortedSubmissions.size
 
                 if (count + entryCount > MAX_ENTRIES) {
