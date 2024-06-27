@@ -687,7 +687,10 @@ private fun dashboardTabProvider(data: List<DPData>): DPTab {
                         it?.forEach { student ->
                             studentHistoryContainer.add(StudentComponent(student).apply {
                                 this.addOnClickListener { r ->
+                                    val (loadingPanel, disposable) = panel.startLoading()
+
                                     State.client.getStudentHistory(r.value) { sh, isException ->
+                                        panel.stopLoading(loadingPanel, disposable)
                                         if (isException)
                                             JOptionPane.showMessageDialog(
                                                 null,
