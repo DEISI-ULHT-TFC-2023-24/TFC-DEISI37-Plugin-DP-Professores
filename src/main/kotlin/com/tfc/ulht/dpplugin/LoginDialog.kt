@@ -13,6 +13,7 @@ import com.intellij.ui.components.JBTextField
 import com.tfc.ulht.dpplugin.dplib.BASE_URL
 import com.tfc.ulht.dpplugin.dplib.addSuffix
 import com.tfc.ulht.dpplugin.dplib.checkAndAddPrefix
+import com.tfc.ulht.dpplugin.settings.ApplicationSettings
 import okhttp3.Credentials
 import java.awt.Dimension
 import java.awt.event.ComponentEvent
@@ -40,6 +41,12 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
 
         init()
         title = "DP Teacher Plugin - Login"
+
+        val settings = ApplicationSettings.getSettings()
+
+        userField.text = settings.username ?: ""
+        tokenField.text = settings.token ?: ""
+        instanceField.text = settings.url
 
         loginButton.addActionListener {
             Credentials.basic(userField.text, tokenField.text).let { token ->
@@ -149,7 +156,7 @@ class LoginDialog(project: Project?) : DialogWrapper(project, null, false, IdeMo
                     )
                 }
 
-                model.isEnabled = false
+                model.isEnabled = tokenUrlLink.text.isNotEmpty()
                 isVisible = true
 
                 setExternalLinkIcon()
