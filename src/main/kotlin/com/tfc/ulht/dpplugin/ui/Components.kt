@@ -851,7 +851,15 @@ class UIBuildReport {
                     psErr.forEachIndexed { index, error ->
                         group("Error $index") {
                             row {
-                                text(error)
+                                cell(
+                                    JTextPane().apply {
+                                        contentType = "text/html"
+                                        text = "<html>$error</html>"
+                                        isEditable = false
+                                        background = null
+                                        border = null
+                                    }
+                                )
                             }
                         }
                     }
@@ -868,7 +876,15 @@ class UIBuildReport {
                         if (error.isNotBlank()) {
                             group {
                                 row {
-                                    text(error)
+                                    cell(
+                                        JTextPane().apply {
+                                            contentType = "text/html"
+                                            text = "<html>$error</html>"
+                                            isEditable = false
+                                            background = null
+                                            border = null
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -881,7 +897,15 @@ class UIBuildReport {
                     csErr.forEach { error ->
                         group {
                             row {
-                                text(error)
+                                cell(
+                                    JTextPane().apply {
+                                        contentType = "text/html"
+                                        text = "<html>$error</html>"
+                                        isEditable = false
+                                        background = null
+                                        border = null
+                                    }
+                                )
                             }
                         }
                     }
@@ -894,8 +918,15 @@ class UIBuildReport {
                         if (error.isNotBlank()) {
                             group {
                                 row {
-                                    text(
-                                        error.replace("<", "&lt;").replace("\n", "<br>")
+                                    cell(
+                                        JTextPane().apply {
+                                            contentType = "text/html"
+                                            text =
+                                                "<html>" + error.replace("<", "&lt;").replace("\n", "<br>") + "</html>"
+                                            isEditable = false
+                                            background = null
+                                            border = null
+                                        }
                                     )
                                 }
                             }
