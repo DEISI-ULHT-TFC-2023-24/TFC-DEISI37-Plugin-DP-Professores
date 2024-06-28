@@ -1,0 +1,5 @@
+Este projeto consiste no desenvolvimento de um plugin para a integração da funcionalidade do Drop Project para professores com o ambiente de desenvolvimento IntelliJ IDEA,
+de forma a facilitar e acelerar as tarefas realizadas com a interface web, sem ser necessário alternar entre o browser e o IDE.
+
+Este também deverá permitir uma melhor integração com as funcionalidades do IDE, como permitir descarregar e abrir osprojetos dos alunos diretamente no IDE,
+facilitando desta forma as ajudas por parte dos professores aos alunos.
