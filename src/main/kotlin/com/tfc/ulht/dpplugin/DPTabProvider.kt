@@ -828,7 +828,7 @@ data class StudentHistoryPage(
         private const val MAX_ENTRIES = 50
 
         fun from(list: List<StudentHistoryEntry>, previous: StudentHistoryPage? = null): StudentHistoryPage {
-            val sortedList =  list.sortedByDescending { it.sortedSubmissions.first().getParsedDate() }
+            val sortedList = list.sortedByDescending { it.sortedSubmissions.first().getParsedDate() }
             var count = 0
             val content = mutableListOf<StudentHistoryEntry>()
 
@@ -856,6 +856,37 @@ data class StudentHistoryPage(
             return StudentHistoryPage(previous, null, content)
         }
     }
+
+    val length: Int
+        get() {
+            var prev = previous
+            var nex = next
+            var result = 1
+
+            while (prev != null) {
+                result += 1
+                prev = prev.previous
+            }
+            while (nex != null) {
+                result += 1
+                nex = nex.next
+            }
+
+            return result
+        }
+
+    val currentIndex: Int
+        get() {
+            var prev = previous
+            var result = 0
+
+            while (prev != null) {
+                result += 1
+                prev = prev.previous
+            }
+
+            return result + 1
+        }
 }
 
 @Suppress("UNCHECKED_CAST")
@@ -911,6 +942,15 @@ private fun studentHistoryTabProvider(data: List<DPData>): DPListTab<SubmissionC
 
     buttonPanel.add(Box.createHorizontalGlue())
     root.rootPanel.add(buttonPanel)
+
+    root.rootPanel.add(JPanel().apply {
+        layout = BoxLayout(this@apply, BoxLayout.X_AXIS)
+        alignmentX = 0F
+
+        add(Box.createHorizontalGlue())
+        add(JLabel("${page.currentIndex}/${page.length}"))
+        add(Box.createHorizontalGlue())
+    })
 
     refresh()
 
